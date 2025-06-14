@@ -1,17 +1,16 @@
 import requests
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 import json
 from datetime import datetime
 import hmac
 import hashlib
 import time
 import base64
-# load_dotenv is no longer needed for API keys
 import os
+import shutil
 from tkinter import simpledialog
 import urllib.parse
-# Ensure both encrypt and decrypt functions are imported
 from crypto_utils import encrypt_api_keys, decrypt_api_keys
 
 class CryptoViewer(tk.Tk):
@@ -21,7 +20,6 @@ class CryptoViewer(tk.Tk):
         self.title("Visor Crypto")
         self.geometry("800x600")
 
-        # Initialize API keys to None
         self.buda_api_key = None
         self.buda_api_secret = None
         self.binance_api_key = None
@@ -29,13 +27,10 @@ class CryptoViewer(tk.Tk):
         self.cryptomkt_api_key = None
         self.cryptomkt_api_secret = None
 
-        # Attempt to load encrypted API keys
         self.load_encrypted_api_keys()
 
-        # Configuración de la interfaz
         self.setup_ui()
 
-        # APIs endpoints
         self.api_endpoints = {
             'buda': 'https://www.buda.com/api/v2',
             'binance': 'https://api.binance.com/api/v3',
@@ -43,10 +38,7 @@ class CryptoViewer(tk.Tk):
         }
 
     def load_encrypted_api_keys(self):
-        """Loads API keys from api_keys.json, prompting for password to decrypt."""
         if not os.path.exists('api_keys.json'):
-            # Optional: Could show a message here if desired
-            # messagebox.showinfo("API Keys", "No saved API keys found. Please configure them manually.")
             return
 
         try:
@@ -89,32 +81,29 @@ class CryptoViewer(tk.Tk):
 
             messagebox.showinfo("API Keys Loaded", "API keys successfully decrypted and loaded.", parent=self)
 
-        except Exception as e: # Catching a broad exception as decrypt_api_keys might raise various errors
+        except Exception as e:
             messagebox.showerror("Decryption Failed", f"Failed to decrypt API keys. Incorrect password or corrupted data. Error: {str(e)}", parent=self)
 
     def setup_ui(self):
-        # Frame principal
         main_frame = ttk.Frame(self)
         main_frame.pack(padx=20, pady=20, fill='both', expand=True)
 
-        # Título
         title_label = ttk.Label(main_frame, text="Visor de Portafolio Crypto", font=("Helvetica", 16))
         title_label.pack(pady=10)
 
-        # Frame para configuración de API
         api_frame = ttk.LabelFrame(main_frame, text="Configuración API")
         api_frame.pack(fill='x', pady=10)
 
-        # Botones de configuración por exchange
         ttk.Button(api_frame, text="Configurar Buda", command=lambda: self.setup_api_keys('buda')).pack(pady=5, padx=5, side='left')
         ttk.Button(api_frame, text="Configurar Binance", command=lambda: self.setup_api_keys('binance')).pack(pady=5, padx=5, side='left')
         ttk.Button(api_frame, text="Configurar CryptoMKT", command=lambda: self.setup_api_keys('cryptomkt')).pack(pady=5, padx=5, side='left')
 
-        # Frame para los balances
+        ttk.Button(api_frame, text="Import Keys", command=self.import_api_keys_file).pack(pady=5, padx=5, side='left')
+        ttk.Button(api_frame, text="Export Keys", command=self.export_api_keys_file).pack(pady=5, padx=5, side='left')
+
         self.balance_frame = ttk.LabelFrame(main_frame, text="Balances")
         self.balance_frame.pack(fill='x', pady=10)
 
-        # Lista para mostrar los balances
         self.balance_tree = ttk.Treeview(self.balance_frame, columns=('Exchange', 'Currency', 'Amount', 'BTC Value'), show='headings')
         self.balance_tree.heading('Exchange', text='Exchange')
         self.balance_tree.heading('Currency', text='Moneda')
@@ -122,15 +111,12 @@ class CryptoViewer(tk.Tk):
         self.balance_tree.heading('BTC Value', text='Valor en BTC')
         self.balance_tree.pack(fill='x', pady=5)
 
-        # Botones para actualizar
         ttk.Button(main_frame, text="Actualizar Balances", command=self.update_balances).pack(pady=10)
 
-        # Área para mostrar el total
         self.total_label = ttk.Label(main_frame, text="Total en BTC: 0.00000000")
         self.total_label.pack(pady=10)
 
     def setup_api_keys(self, exchange):
-        """Configura las API keys del exchange especificado"""
         if exchange == 'buda':
             api_key = simpledialog.askstring("Configuración", "Ingrese su API Key de Buda:", parent=self)
             api_secret = simpledialog.askstring("Configuración", "Ingrese su API Secret de Buda:", parent=self)
@@ -157,7 +143,6 @@ class CryptoViewer(tk.Tk):
                 self.save_api_keys()
 
     def save_api_keys(self):
-        """Prompts for a master password and saves encrypted API keys to api_keys.json"""
         password = simpledialog.askstring("Master Password", "Enter a password to encrypt your API keys:", show='*', parent=self)
 
         if not password:
@@ -189,8 +174,75 @@ class CryptoViewer(tk.Tk):
         except Exception as e:
             messagebox.showerror("Error", f"Failed to encrypt and save API keys. Error: {str(e)}", parent=self)
 
+    def import_api_keys_file(self):
+        filepath = filedialog.askopenfilename(
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            title="Import API Keys File",
+            parent=self
+        )
+
+        if not filepath:
+            # User cancelled the dialog
+            return
+
+        try:
+            with open(filepath, 'r') as f:
+                imported_data = json.load(f)
+        except json.JSONDecodeError:
+            messagebox.showerror("Import Error", "Invalid JSON file. Could not decode the file.", parent=self)
+            return
+        except Exception as e:
+            messagebox.showerror("Import Error", f"Failed to read the selected file. Error: {str(e)}", parent=self)
+            return
+
+        # Validate structure
+        if not isinstance(imported_data, dict) or \
+           'encryptedHex' not in imported_data or \
+           'ivHex' not in imported_data or \
+           'saltHex' not in imported_data:
+            messagebox.showerror("Import Error", "Invalid file format. The file must contain 'encryptedHex', 'ivHex', and 'saltHex' fields.", parent=self)
+            return
+
+        try:
+            # Overwrite api_keys.json with the imported data
+            with open('api_keys.json', 'w') as f:
+                json.dump(imported_data, f, indent=4)
+
+            messagebox.showinfo("Import Successful",
+                                f"API keys successfully imported from {filepath}. "
+                                "Attempting to load them now.",
+                                parent=self)
+
+            # Attempt to load the newly imported keys
+            self.load_encrypted_api_keys()
+
+        except Exception as e:
+            messagebox.showerror("Import Error", f"Failed to write to api_keys.json. Error: {str(e)}", parent=self)
+
+    def export_api_keys_file(self):
+        if not os.path.exists('api_keys.json') or os.path.getsize('api_keys.json') == 0:
+            messagebox.showinfo("Export Keys", "No API keys are currently saved to export.", parent=self)
+            return
+
+        filepath = filedialog.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            title="Save API Keys Backup",
+            initialfile="crypto_glance_session_backup.json",
+            parent=self
+        )
+
+        if not filepath:
+            return
+
+        try:
+            shutil.copyfile('api_keys.json', filepath)
+            messagebox.showinfo("Export Successful", f"API keys successfully exported to {filepath}", parent=self)
+        except Exception as e:
+            messagebox.showerror("Export Error", f"Failed to export API keys. Error: {str(e)}", parent=self)
+
     def get_binance_signature(self, params):
-        """Genera la firma para la autenticación con Binance"""
         query_string = urllib.parse.urlencode(params)
         signature = hmac.new(
             self.binance_api_secret.encode('utf-8'),
@@ -200,7 +252,6 @@ class CryptoViewer(tk.Tk):
         return signature
 
     def get_binance_balance(self):
-        """Obtiene los balances de Binance"""
         if not self.binance_api_key or not self.binance_api_secret:
             messagebox.showwarning("Advertencia", "Por favor configure primero sus API keys de Binance.", parent=self)
             return {}
@@ -243,7 +294,6 @@ class CryptoViewer(tk.Tk):
             return {}
 
     def get_buda_signature(self, nonce, method, path, body=''):
-        """Genera la firma para la autenticación con Buda"""
         message = f'{nonce}{method}{path}{body}'
         signature = hmac.new(
             self.buda_api_secret.encode('utf-8'),
@@ -253,7 +303,6 @@ class CryptoViewer(tk.Tk):
         return signature
 
     def get_buda_balance(self):
-        """Obtiene los balances de Buda"""
         if not self.buda_api_key or not self.buda_api_secret:
             messagebox.showwarning("Advertencia", "Por favor configure primero sus API keys de Buda.", parent=self)
             return {}
@@ -293,7 +342,6 @@ class CryptoViewer(tk.Tk):
             return {}
 
     def get_cryptomkt_signature(self, timestamp, method, endpoint, body=''):
-        """Genera la firma para la autenticación con CryptoMKT"""
         message = f'{timestamp}{method}{endpoint}{body}'
         signature = hmac.new(
             self.cryptomkt_api_secret.encode('utf-8'),
@@ -303,7 +351,6 @@ class CryptoViewer(tk.Tk):
         return signature
 
     def get_cryptomkt_balance(self):
-        """Obtiene los balances de CryptoMKT"""
         if not self.cryptomkt_api_key or not self.cryptomkt_api_secret:
             messagebox.showwarning("Advertencia", "Por favor configure primero sus API keys de CryptoMKT.", parent=self)
             return {}
@@ -346,19 +393,16 @@ class CryptoViewer(tk.Tk):
             return {}
 
     def update_balances(self):
-        """Actualiza los balances de todas las exchanges"""
-        # Limpiar tabla actual
         for item in self.balance_tree.get_children():
             self.balance_tree.delete(item)
 
         total_btc = 0
 
-        # Obtener y mostrar balances de Buda
-        if self.buda_api_key and self.buda_api_secret: # Check if keys are loaded
+        if self.buda_api_key and self.buda_api_secret:
             buda_balances = self.get_buda_balance()
             for currency, balance in buda_balances.items():
                 amount = balance['amount']
-                btc_value = amount  # TODO: Implementar conversión a BTC
+                btc_value = amount
                 if currency == 'BTC':
                     btc_value = amount
                     total_btc += amount
@@ -370,12 +414,11 @@ class CryptoViewer(tk.Tk):
                     f"{btc_value:.8f}"
                 ))
 
-        # Obtener y mostrar balances de Binance
-        if self.binance_api_key and self.binance_api_secret: # Check if keys are loaded
+        if self.binance_api_key and self.binance_api_secret:
             binance_balances = self.get_binance_balance()
             for currency, balance in binance_balances.items():
                 amount = balance['amount']
-                btc_value = amount  # TODO: Implementar conversión a BTC
+                btc_value = amount
                 if currency == 'BTC':
                     btc_value = amount
                     total_btc += amount
@@ -387,12 +430,11 @@ class CryptoViewer(tk.Tk):
                     f"{btc_value:.8f}"
                 ))
 
-        # Obtener y mostrar balances de CryptoMKT
-        if self.cryptomkt_api_key and self.cryptomkt_api_secret: # Check if keys are loaded
+        if self.cryptomkt_api_key and self.cryptomkt_api_secret:
             cryptomkt_balances = self.get_cryptomkt_balance()
             for currency, balance in cryptomkt_balances.items():
                 amount = balance['amount']
-                btc_value = amount  # TODO: Implementar conversión a BTC
+                btc_value = amount
                 if currency == 'BTC':
                     btc_value = amount
                     total_btc += amount
@@ -404,7 +446,6 @@ class CryptoViewer(tk.Tk):
                     f"{btc_value:.8f}"
                 ))
 
-        # Actualizar total
         self.total_label.config(text=f"Total en BTC: {total_btc:.8f}")
 
 if __name__ == "__main__":
