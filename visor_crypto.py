@@ -1,6 +1,7 @@
 import requests
 import tkinter as tk
 from tkinter import ttk, messagebox
+from tkinter.ttk import Style # Added Style import
 import json
 from datetime import datetime
 import hmac
@@ -15,10 +16,36 @@ import urllib.parse
 class CryptoViewer(tk.Tk):
     def __init__(self):
         super().__init__()
-        
+
+        # Apply a theme
+        self.style = Style()
+        self.style.theme_use('clam') # Using 'clam' theme
+
+        # Define a color palette (light theme)
+        bg_color = '#F0F0F0'
+        frame_bg_color = '#FFFFFF'
+        text_color = '#333333'
+        accent_color = '#007ACC'
+        button_fg_color = '#FFFFFF'
+
+        # Configure styles
+        self.style.configure('.', background=bg_color, foreground=text_color, font=('Helvetica', 10))
+        self.style.configure('TFrame', background=frame_bg_color)
+        self.style.configure('TLabel', background=frame_bg_color, foreground=text_color, font=('Helvetica', 10))
+        self.style.configure('TLabelframe', background=frame_bg_color, foreground=text_color, font=('Helvetica', 10, 'bold'))
+        self.style.configure('TLabelframe.Label', background=frame_bg_color, foreground=text_color, font=('Helvetica', 10, 'bold'))
+        self.style.configure('TButton', background=accent_color, foreground=button_fg_color, font=('Helvetica', 10, 'bold'))
+        self.style.map('TButton', background=[('active', '#005f9e')]) # Darker blue on active
+        self.style.configure('Treeview', background=frame_bg_color, foreground=text_color, fieldbackground=frame_bg_color, font=('Helvetica', 10))
+        self.style.configure('Treeview.Heading', background=accent_color, foreground=button_fg_color, font=('Helvetica', 10, 'bold'))
+        self.style.map('Treeview.Heading', background=[('active', '#005f9e')])
+
+        # Apply to Main Window
+        self.configure(background=bg_color)
+
         self.title("Visor Crypto")
-        self.geometry("800x600")
-        
+        self.geometry("500x700") # Changed geometry
+
         # Cargar configuración
         load_dotenv()
         self.buda_api_key = os.getenv('BUDA_API_KEY')
@@ -27,60 +54,67 @@ class CryptoViewer(tk.Tk):
         self.binance_api_secret = os.getenv('BINANCE_API_SECRET')
         self.cryptomkt_api_key = os.getenv('CRYPTOMKT_API_KEY')
         self.cryptomkt_api_secret = os.getenv('CRYPTOMKT_API_SECRET')
-        
+
         # Configuración de la interfaz
         self.setup_ui()
-        
+
         # APIs endpoints
         self.api_endpoints = {
             'buda': 'https://www.buda.com/api/v2',
             'binance': 'https://api.binance.com/api/v3',
             'cryptomkt': 'https://api.cryptomkt.com/v3'
         }
-        
+
     def setup_ui(self):
         # Frame principal
         main_frame = ttk.Frame(self)
+        # Increased padding for main_frame
         main_frame.pack(padx=20, pady=20, fill='both', expand=True)
-        
+
         # Título
-        title_label = ttk.Label(main_frame, text="Visor de Portafolio Crypto", font=("Helvetica", 16))
-        title_label.pack(pady=10)
-        
+        # Updated title_label font
+        title_label = ttk.Label(main_frame, text="Visor de Portafolio Crypto", font=("Helvetica", 18, "bold"))
+        title_label.pack(pady=20) # Increased pady for title
+
         # Frame para configuración de API
         api_frame = ttk.LabelFrame(main_frame, text="Configuración API")
-        api_frame.pack(fill='x', pady=10)
-        
+        api_frame.pack(fill='x', pady=15) # Increased pady for api_frame
+
         # Botones de configuración por exchange
-        ttk.Button(api_frame, text="Configurar Buda", command=lambda: self.setup_api_keys('buda')).pack(pady=5, padx=5, side='left')
-        ttk.Button(api_frame, text="Configurar Binance", command=lambda: self.setup_api_keys('binance')).pack(pady=5, padx=5, side='left')
-        ttk.Button(api_frame, text="Configurar CryptoMKT", command=lambda: self.setup_api_keys('cryptomkt')).pack(pady=5, padx=5, side='left')
-        
+        # Changed packing for vertical stacking and responsiveness
+        ttk.Button(api_frame, text="Configurar Buda", command=lambda: self.setup_api_keys('buda')).pack(pady=5, padx=5, fill='x')
+        ttk.Button(api_frame, text="Configurar Binance", command=lambda: self.setup_api_keys('binance')).pack(pady=5, padx=5, fill='x')
+        ttk.Button(api_frame, text="Configurar CryptoMKT", command=lambda: self.setup_api_keys('cryptomkt')).pack(pady=5, padx=5, fill='x')
+
         # Frame para los balances
         self.balance_frame = ttk.LabelFrame(main_frame, text="Balances")
-        self.balance_frame.pack(fill='x', pady=10)
-        
+        # Increased pady and set fill to 'both', expand to True for balance_frame
+        self.balance_frame.pack(fill='both', expand=True, pady=15)
+
         # Lista para mostrar los balances
         self.balance_tree = ttk.Treeview(self.balance_frame, columns=('Exchange', 'Currency', 'Amount', 'BTC Value'), show='headings')
         self.balance_tree.heading('Exchange', text='Exchange')
         self.balance_tree.heading('Currency', text='Moneda')
         self.balance_tree.heading('Amount', text='Cantidad')
         self.balance_tree.heading('BTC Value', text='Valor en BTC')
-        self.balance_tree.pack(fill='x', pady=5)
-        
+        # Added fill='both', expand=True, and pady for balance_tree
+        self.balance_tree.pack(fill='both', expand=True, pady=10)
+
         # Botones para actualizar
-        ttk.Button(main_frame, text="Actualizar Balances", command=self.update_balances).pack(pady=10)
-        
+        # Increased pady for update button
+        ttk.Button(main_frame, text="Actualizar Balances", command=self.update_balances).pack(pady=15)
+
         # Área para mostrar el total
-        self.total_label = ttk.Label(main_frame, text="Total en BTC: 0.00000000")
-        self.total_label.pack(pady=10)
-    
+        # Updated font for total_label and increased pady
+        self.total_label = ttk.Label(main_frame, text="Total en BTC: 0.00000000", font=("Helvetica", 12))
+        self.total_label.pack(pady=15)
+
     def setup_api_keys(self, exchange):
         """Configura las API keys del exchange especificado"""
         if exchange == 'buda':
             api_key = simpledialog.askstring("Configuración", "Ingrese su API Key de Buda:", parent=self)
             api_secret = simpledialog.askstring("Configuración", "Ingrese su API Secret de Buda:", parent=self)
-            
+
             if api_key and api_secret:
                 self.buda_api_key = api_key
                 self.buda_api_secret = api_secret
@@ -88,7 +122,7 @@ class CryptoViewer(tk.Tk):
         elif exchange == 'binance':
             api_key = simpledialog.askstring("Configuración", "Ingrese su API Key de Binance:", parent=self)
             api_secret = simpledialog.askstring("Configuración", "Ingrese su API Secret de Binance:", parent=self)
-            
+
             if api_key and api_secret:
                 self.binance_api_key = api_key
                 self.binance_api_secret = api_secret
@@ -96,7 +130,7 @@ class CryptoViewer(tk.Tk):
         elif exchange == 'cryptomkt':
             api_key = simpledialog.askstring("Configuración", "Ingrese su API Key de CryptoMKT:", parent=self)
             api_secret = simpledialog.askstring("Configuración", "Ingrese su API Secret de CryptoMKT:", parent=self)
-            
+
             if api_key and api_secret:
                 self.cryptomkt_api_key = api_key
                 self.cryptomkt_api_secret = api_secret
@@ -131,26 +165,26 @@ class CryptoViewer(tk.Tk):
         if not self.binance_api_key or not self.binance_api_secret:
             messagebox.showwarning("Advertencia", "Por favor configure primero sus API keys de Binance.")
             return {}
-        
+
         try:
             timestamp = int(time.time() * 1000)
             params = {
                 'timestamp': timestamp
             }
-            
+
             signature = self.get_binance_signature(params)
             params['signature'] = signature
-            
+
             headers = {
                 'X-MBX-APIKEY': self.binance_api_key
             }
-            
+
             response = requests.get(
                 f'{self.api_endpoints["binance"]}/account',
                 headers=headers,
                 params=params
             )
-            
+
             if response.status_code == 200:
                 data = response.json()
                 return {
@@ -164,7 +198,7 @@ class CryptoViewer(tk.Tk):
             else:
                 messagebox.showerror("Error", f"Error al obtener balances de Binance: {response.text}")
                 return {}
-                
+
         except Exception as e:
             messagebox.showerror("Error", f"Error al conectar con Binance: {str(e)}")
             return {}
@@ -184,23 +218,23 @@ class CryptoViewer(tk.Tk):
         if not self.buda_api_key or not self.buda_api_secret:
             messagebox.showwarning("Advertencia", "Por favor configure primero sus API keys de Buda.")
             return {}
-        
+
         try:
             nonce = str(int(time.time() * 1000))
             path = '/api/v2/balances'
             signature = self.get_buda_signature(nonce, 'GET', path)
-            
+
             headers = {
                 'X-SBTC-APIKEY': self.buda_api_key,
                 'X-SBTC-NONCE': nonce,
                 'X-SBTC-SIGNATURE': signature
             }
-            
+
             response = requests.get(
                 f'{self.api_endpoints["buda"]}/balances',
                 headers=headers
             )
-            
+
             if response.status_code == 200:
                 balances = response.json()['balances']
                 return {
@@ -214,7 +248,7 @@ class CryptoViewer(tk.Tk):
             else:
                 messagebox.showerror("Error", f"Error al obtener balances: {response.text}")
                 return {}
-                
+
         except Exception as e:
             messagebox.showerror("Error", f"Error al conectar con Buda: {str(e)}")
             return {}
@@ -234,25 +268,25 @@ class CryptoViewer(tk.Tk):
         if not self.cryptomkt_api_key or not self.cryptomkt_api_secret:
             messagebox.showwarning("Advertencia", "Por favor configure primero sus API keys de CryptoMKT.")
             return {}
-        
+
         try:
             timestamp = str(int(time.time() * 1000))
             method = 'GET'
             endpoint = '/balance'
-            
+
             signature = self.get_cryptomkt_signature(timestamp, method, endpoint)
-            
+
             headers = {
                 'X-MKT-APIKEY': self.cryptomkt_api_key,
                 'X-MKT-TIMESTAMP': timestamp,
                 'X-MKT-SIGNATURE': signature
             }
-            
+
             response = requests.get(
                 f'{self.api_endpoints["cryptomkt"]}/balance',
                 headers=headers
             )
-            
+
             if response.status_code == 200:
                 data = response.json()
                 balances = data.get('data', [])
@@ -267,7 +301,7 @@ class CryptoViewer(tk.Tk):
             else:
                 messagebox.showerror("Error", f"Error al obtener balances de CryptoMKT: {response.text}")
                 return {}
-                
+
         except Exception as e:
             messagebox.showerror("Error", f"Error al conectar con CryptoMKT: {str(e)}")
             return {}
@@ -277,57 +311,60 @@ class CryptoViewer(tk.Tk):
         # Limpiar tabla actual
         for item in self.balance_tree.get_children():
             self.balance_tree.delete(item)
-            
+
         total_btc = 0
-        
+
         # Obtener y mostrar balances de Buda
         buda_balances = self.get_buda_balance()
-        for currency, balance in buda_balances.items():
-            amount = balance['amount']
-            btc_value = amount  # TODO: Implementar conversión a BTC
-            if currency == 'BTC':
-                btc_value = amount
-                total_btc += amount
-            
-            self.balance_tree.insert('', 'end', values=(
-                'Buda',
-                currency,
-                f"{amount:.8f}",
-                f"{btc_value:.8f}"
-            ))
-            
+        if buda_balances: # Check if not empty
+            for currency, balance in buda_balances.items():
+                amount = balance['amount']
+                btc_value = amount  # TODO: Implementar conversión a BTC
+                if currency == 'BTC':
+                    btc_value = amount
+                    total_btc += amount
+
+                self.balance_tree.insert('', 'end', values=(
+                    'Buda',
+                    currency,
+                    f"{amount:.8f}",
+                    f"{btc_value:.8f}"
+                ))
+
         # Obtener y mostrar balances de Binance
         binance_balances = self.get_binance_balance()
-        for currency, balance in binance_balances.items():
-            amount = balance['amount']
-            btc_value = amount  # TODO: Implementar conversión a BTC
-            if currency == 'BTC':
-                btc_value = amount
-                total_btc += amount
-            
-            self.balance_tree.insert('', 'end', values=(
-                'Binance',
-                currency,
-                f"{amount:.8f}",
-                f"{btc_value:.8f}"
-            ))
-            
+        if binance_balances: # Check if not empty
+            for currency, balance in binance_balances.items():
+                amount = balance['amount']
+                btc_value = amount  # TODO: Implementar conversión a BTC
+                if currency == 'BTC':
+                    btc_value = amount
+                    total_btc += amount
+
+                self.balance_tree.insert('', 'end', values=(
+                    'Binance',
+                    currency,
+                    f"{amount:.8f}",
+                    f"{btc_value:.8f}"
+                ))
+
         # Obtener y mostrar balances de CryptoMKT
         cryptomkt_balances = self.get_cryptomkt_balance()
-        for currency, balance in cryptomkt_balances.items():
-            amount = balance['amount']
-            btc_value = amount  # TODO: Implementar conversión a BTC
-            if currency == 'BTC':
-                btc_value = amount
-                total_btc += amount
-            
-            self.balance_tree.insert('', 'end', values=(
-                'CryptoMKT',
-                currency,
-                f"{amount:.8f}",
-                f"{btc_value:.8f}"
-            ))
-        
+        if cryptomkt_balances: # Check if not empty
+            for currency, balance in cryptomkt_balances.items():
+                amount = balance['amount']
+                btc_value = amount  # TODO: Implementar conversión a BTC
+                if currency == 'BTC':
+                    btc_value = amount
+                    total_btc += amount
+
+                self.balance_tree.insert('', 'end', values=(
+                    'CryptoMKT',
+                    currency,
+                    f"{amount:.8f}",
+                    f"{btc_value:.8f}"
+                ))
+
         # Actualizar total
         self.total_label.config(text=f"Total en BTC: {total_btc:.8f}")
 
