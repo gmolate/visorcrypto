@@ -1,6 +1,7 @@
 import requests
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+from ttkthemes import ThemedTk
 import json
 from datetime import datetime
 import hmac
@@ -36,9 +37,9 @@ def decrypt_api_keys(encrypted_hex, iv_hex, salt_hex, password):
 # --- Fin del bloque simulado ---
 
 
-class CryptoViewer(tk.Tk):
+class CryptoViewer(ThemedTk):
     def __init__(self):
-        super().__init__()
+        super().__init__(theme="arc") # Puedes probar otros temas como "plastik", "adapta", etc.
 
         self.title("Visor Crypto")
         self.geometry("800x600")
@@ -137,6 +138,19 @@ class CryptoViewer(tk.Tk):
         self.balance_tree.heading('Moneda', text='Moneda')
         self.balance_tree.heading('Cantidad', text='Cantidad')
         self.balance_tree.pack(fill='both', expand=True, pady=5)
+
+        # Frame para saldos acumulados
+        self.total_balance_frame = ttk.LabelFrame(main_frame, text="Saldos Acumulados Totales")
+        self.total_balance_frame.pack(fill='x', pady=10)
+
+        self.total_balance_tree = ttk.Treeview(self.total_balance_frame, columns=('Moneda', 'Cantidad Total'), show='headings')
+        self.total_balance_tree.heading('Moneda', text='Moneda')
+        self.total_balance_tree.heading('Cantidad Total', text='Cantidad Total')
+        self.total_balance_tree.pack(fill='both', expand=True, pady=5)
+
+        # Label para el valor total del portafolio en USD
+        self.total_portfolio_value_label = ttk.Label(main_frame, text="Valor Total Estimado del Portafolio (USD): $0.00", font=("Helvetica", 12))
+        self.total_portfolio_value_label.pack(pady=(5,10))
 
         ttk.Button(main_frame, text="Actualizar Balances", command=self.update_balances).pack(pady=10)
 
@@ -304,26 +318,84 @@ class CryptoViewer(tk.Tk):
     # =========================================================================
     
     def update_balances(self):
+        # Limpiar vistas previas
         for item in self.balance_tree.get_children():
             self.balance_tree.delete(item)
+        for item in self.total_balance_tree.get_children():
+            self.total_balance_tree.delete(item)
+
+        total_portfolio = {} # Diccionario para acumular los saldos: {'BTC': 0.5, 'ETH': 10}
+
+        # Función auxiliar para agregar al portafolio total
+        def add_to_total_portfolio(balances, exchange_name):
+            for currency, data in balances.items():
+                # Aseguramos que 'amount' exista, si no, asumimos que 'data' es directamente el monto
+                amount = data if isinstance(data, (float, int)) else data.get('amount', 0)
+
+                # Normalizar nombres de criptomonedas (ej. BTC-CLP -> BTC)
+                currency_code = currency.split('-')[0].upper()
+
+                if amount > 0:
+                    self.balance_tree.insert('', 'end', values=(exchange_name, currency_code, f"{amount:.8f}"))
+                    total_portfolio[currency_code] = total_portfolio.get(currency_code, 0) + amount
 
         # Buda
         if self.buda_api_key:
-            buda_balances = self.get_buda_balance()
-            for currency, amount in buda_balances.items():
-                self.balance_tree.insert('', 'end', values=('Buda', currency, f"{amount:.8f}"))
+            buda_balances = self.get_buda_balance() # { 'BTC': amount, 'ETH': amount }
+            add_to_total_portfolio(buda_balances, 'Buda')
 
         # Binance
         if self.binance_api_key:
-            binance_balances = self.get_binance_balance()
-            for currency, amount in binance_balances.items():
-                self.balance_tree.insert('', 'end', values=('Binance', currency, f"{amount:.8f}"))
+            binance_balances = self.get_binance_balance() # { 'BTC': amount, 'USDT': amount }
+            add_to_total_portfolio(binance_balances, 'Binance')
 
         # CryptoMKT
+        # La función get_cryptomkt_balance ya devuelve {'CURRENCY': amount}
         if self.cryptomkt_api_key:
             cryptomkt_balances = self.get_cryptomkt_balance()
-            for currency, amount in cryptomkt_balances.items():
-                self.balance_tree.insert('', 'end', values=('CryptoMKT', currency, f"{amount:.8f}"))
+            add_to_total_portfolio(cryptomkt_balances, 'CryptoMKT')
+
+        # Obtener precios de Binance para calcular el valor en USD
+        prices_usd = self.get_prices_from_binance() # {'BTCUSDT': 60000.0, 'ETHUSDT': 3000.0}
+
+        total_portfolio_usd_value = 0
+
+        # Poblar la tabla de saldos acumulados y calcular valor en USD
+        for currency, total_amount in total_portfolio.items():
+            if total_amount > 0: # Solo mostrar si hay saldo
+                self.total_balance_tree.insert('', 'end', values=(currency, f"{total_amount:.8f}"))
+
+                # Intentar encontrar el precio para la moneda (ej. BTCUSDT, ETHUSDT)
+                # Binance usa el par con USDT, ej. BTCUSDT
+                price_symbol_usdt = f"{currency}USDT"
+                price_symbol_busd = f"{currency}BUSD" # Algunas pueden estar en BUSD
+
+                price = prices_usd.get(price_symbol_usdt)
+                if price is None: # Si no se encuentra con USDT, intentar con BUSD
+                    price = prices_usd.get(price_symbol_busd)
+
+                if price:
+                    total_portfolio_usd_value += total_amount * price
+
+        self.total_portfolio_value_label.config(text=f"Valor Total Estimado del Portafolio (USD): ${total_portfolio_usd_value:,.2f}")
+
+    def get_prices_from_binance(self):
+        """Obtiene los precios de todos los tickers de Binance en formato {symbol: price}."""
+        try:
+            url = f"{self.api_endpoints['binance']}/api/v3/ticker/price"
+            response = requests.get(url)
+            response.raise_for_status()
+            prices_data = response.json() # Lista de diccionarios: [{'symbol': 'BTCUSDT', 'price': '60000.00'}, ...]
+
+            # Convertir la lista de diccionarios a un solo diccionario {symbol: price}
+            # y asegurarse de que el precio sea float
+            return {item['symbol']: float(item['price']) for item in prices_data}
+        except requests.exceptions.RequestException as e:
+            messagebox.showerror("Error de Precios", f"No se pudieron obtener los precios de Binance: {e}", parent=self)
+            return {}
+        except Exception as e:
+            messagebox.showerror("Error de Precios", f"Error procesando precios de Binance: {str(e)}", parent=self)
+            return {}
 
 if __name__ == "__main__":
     app = CryptoViewer()
