@@ -15,8 +15,14 @@ MOCK_API_KEYS = {
 @app.route('/')
 def index():
     buda_balances = get_buda_balance(MOCK_API_KEYS['buda']['apiKey'], MOCK_API_KEYS['buda']['apiSecret'])
+    if buda_balances is None:
+        buda_balances = {}
     binance_balances = get_binance_balance(MOCK_API_KEYS['binance']['apiKey'], MOCK_API_KEYS['binance']['apiSecret'])
+    if binance_balances is None:
+        binance_balances = {}
     cryptomkt_balances = get_cryptomkt_balance(MOCK_API_KEYS['cryptomkt']['apiKey'], MOCK_API_KEYS['cryptomkt']['apiSecret'])
+    if cryptomkt_balances is None:
+        cryptomkt_balances = {}
 
     all_balances = {
         'Buda': buda_balances,

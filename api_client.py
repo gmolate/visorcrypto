@@ -12,7 +12,7 @@ API_ENDPOINTS = {
 
 def get_binance_balance(api_key, api_secret):
     if not api_key or not api_secret:
-        return {}
+        return None
     try:
         timestamp = int(time.time() * 1000)
         query_string = f'timestamp={timestamp}'
@@ -24,11 +24,11 @@ def get_binance_balance(api_key, api_secret):
         return {b['asset']: float(b['free']) + float(b['locked']) for b in data['balances'] if float(b['free']) > 0 or float(b['locked']) > 0}
     except Exception as e:
         print(f"Error connecting to Binance: {e}")
-        return {}
+        return None
 
 def get_buda_balance(api_key, api_secret):
     if not api_key or not api_secret:
-        return {}
+        return None
     try:
         nonce = str(int(time.time() * 1000))
         path = '/api/v2/balances'
@@ -41,11 +41,11 @@ def get_buda_balance(api_key, api_secret):
         return {b['id']: float(b['amount'][0]) for b in balances if float(b['amount'][0]) > 0}
     except Exception as e:
         print(f"Error connecting to Buda: {e}")
-        return {}
+        return None
 
 def get_cryptomkt_balance(api_key, api_secret):
     if not api_key or not api_secret:
-        return {}
+        return None
     try:
         path = '/api/3/wallet/balances'
         timestamp = str(int(time.time()))
@@ -77,7 +77,7 @@ def get_cryptomkt_balance(api_key, api_secret):
             except json.JSONDecodeError:
                 error_details = e.response.text
         print(f"Error connecting to CryptoMKT: {error_details}")
-        return {}
+        return None
 
 def get_prices_from_binance():
     try:

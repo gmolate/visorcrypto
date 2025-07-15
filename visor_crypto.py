@@ -299,15 +299,18 @@ class CryptoViewer(ThemedTk):
 
         if self.buda_api_key:
             buda_balances = get_buda_balance(self.buda_api_key, self.buda_api_secret)
-            add_to_total_portfolio(buda_balances, 'Buda')
+            if buda_balances is not None:
+                add_to_total_portfolio(buda_balances, 'Buda')
 
         if self.binance_api_key:
             binance_balances = get_binance_balance(self.binance_api_key, self.binance_api_secret)
-            add_to_total_portfolio(binance_balances, 'Binance')
+            if binance_balances is not None:
+                add_to_total_portfolio(binance_balances, 'Binance')
 
         if self.cryptomkt_api_key:
             cryptomkt_balances = get_cryptomkt_balance(self.cryptomkt_api_key, self.cryptomkt_api_secret)
-            add_to_total_portfolio(cryptomkt_balances, 'CryptoMKT')
+            if cryptomkt_balances is not None:
+                add_to_total_portfolio(cryptomkt_balances, 'CryptoMKT')
 
         prices_usd = get_prices_from_binance()
         total_portfolio_usd_value = 0
