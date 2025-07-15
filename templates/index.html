@@ -9,7 +9,10 @@
 <body>
     <div class="container">
         <h1>Visor de Portafolio Crypto</h1>
-        <h2>Valor Total Estimado del Portafolio: ${{ "%.2f"|format(total_portfolio_usd_value) }}</h2>
+        <div class="header-container">
+            <h2>Valor Total Estimado del Portafolio: ${{ "%.2f"|format(total_portfolio_usd_value) }}</h2>
+            <button id="refresh-btn" onclick="location.reload()">Refrescar</button>
+        </div>
 
         <div class="table-container">
             <h3>Balances por Exchange</h3>

@@ -80,3 +80,24 @@ tbody tr:hover {
 .graph-btn:hover {
     background-color: #2980B9;
 }
+
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+#refresh-btn {
+    background-color: #3498DB;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#refresh-btn:hover {
+    background-color: #2980B9;
+}

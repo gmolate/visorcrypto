@@ -14,30 +14,7 @@ from tkinter import simpledialog
 import urllib.parse
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-# Asumiendo que tienes este archivo con las funciones de encriptación
-# from crypto_utils import encrypt_api_keys, decrypt_api_keys
-
-# --- Bloque de crypto_utils.py (simulado si no lo tienes) ---
-# Para que el script se pueda ejecutar, si no tienes el archivo crypto_utils.py,
-# puedes usar este bloque. Si ya lo tienes, puedes eliminarlo.
-def encrypt_api_keys(data, password):
-    # Implementación de marcador de posición
-    print("Simulando encriptación...")
-    return {"encryptedHex": "encrypted_data_placeholder", "ivHex": "iv_placeholder", "saltHex": "salt_placeholder"}
-
-def decrypt_api_keys(encrypted_hex, iv_hex, salt_hex, password):
-    # Implementación de marcador de posición
-    print("Simulando desencriptación...")
-    # Devuelve claves de prueba si la contraseña es 'password'
-    if password == 'password':
-        return {
-            "buda": {"apiKey": "buda_key", "apiSecret": "buda_secret"},
-            "binance": {"apiKey": "binance_key", "apiSecret": "binance_secret"},
-            "cryptomkt": {"apiKey": "cryptomkt_key", "apiSecret": "cryptomkt_secret"}
-        }
-    raise Exception("Contraseña incorrecta o datos corruptos")
-# --- Fin del bloque simulado ---
-
+from crypto_utils import encrypt_api_keys, decrypt_api_keys
 from api_client import get_buda_balance, get_binance_balance, get_cryptomkt_balance, get_prices_from_binance
 
 class CryptoViewer(ThemedTk):
@@ -183,7 +160,11 @@ class CryptoViewer(ThemedTk):
         self.total_balance_tree.heading('Cantidad Total', text='Cantidad Total')
         self.total_balance_tree.pack(fill='both', expand=True, pady=5)
 
-        ttk.Button(main_frame, text="Actualizar Balances", command=self.update_balances).pack(pady=20)
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(pady=20)
+
+        ttk.Button(button_frame, text="Actualizar Balances", command=self.update_balances).pack(side='left', padx=10)
+        ttk.Button(button_frame, text="Refrescar", command=self.update_balances).pack(side='left', padx=10)
 
     def on_tree_click(self, event):
         region = self.balance_tree.identify("region", event.x, event.y)
