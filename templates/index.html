@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Visor Web</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Visor de Portafolio Crypto</h1>
+        <h2>Valor Total Estimado del Portafolio: ${{ "%.2f"|format(total_portfolio_usd_value) }}</h2>
+
+        <div class="table-container">
+            <h3>Balances por Exchange</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Exchange</th>
+                        <th>Moneda</th>
+                        <th>Cantidad</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for exchange, balances in all_balances.items() %}
+                        {% for currency, amount in balances.items() %}
+                            <tr>
+                                <td>{{ exchange }}</td>
+                                <td>{{ currency }}</td>
+                                <td>{{ "%.8f"|format(amount) }}</td>
+                                <td><button class="graph-btn" data-exchange="{{ exchange }}" data-currency="{{ currency }}">Ver Gráfico</button></td>
+                            </tr>
+                        {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-container">
+            <h3>Saldos Acumulados Totales</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Moneda</th>
+                        <th>Cantidad Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for currency, amount in total_portfolio.items() %}
+                        <tr>
+                            <td>{{ currency }}</td>
+                            <td>{{ "%.8f"|format(amount) }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="chart-container" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: #2A2D30; padding: 20px; border-radius: 8px; z-index: 1000;">
+        <canvas id="crypto-chart" width="800" height="400"></canvas>
+        <button id="close-chart-btn" style="position: absolute; top: 10px; right: 10px;">Cerrar</button>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+</html>
