@@ -132,6 +132,11 @@ class CryptoViewer(ThemedTk):
         api_menu.add_separator()
         api_menu.add_command(label="Importar Keys", command=self.import_api_keys_file)
         api_menu.add_command(label="Exportar Keys", command=self.export_api_keys_file)
+        
+        help_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Ayuda", menu=help_menu)
+        help_menu.add_command(label="Solución de Problemas", command=self.show_troubleshooting)
+        help_menu.add_command(label="Acerca de", command=self.show_about)
 
         title_label = ttk.Label(main_frame, text="Visor de Portafolio Crypto", font=("Helvetica", 20, 'bold'))
         title_label.pack(pady=20)
@@ -163,8 +168,16 @@ class CryptoViewer(ThemedTk):
         button_frame = ttk.Frame(main_frame)
         button_frame.pack(pady=20)
 
-        ttk.Button(button_frame, text="Actualizar Balances", command=self.update_balances).pack(side='left', padx=10)
+        # Botón principal de actualización más prominente
+        self.update_button = ttk.Button(button_frame, text="🔄 ACTUALIZAR BALANCES", command=self.update_balances)
+        self.update_button.pack(side='left', padx=10)
+        
+        # Botón secundario
         ttk.Button(button_frame, text="Refrescar", command=self.update_balances).pack(side='left', padx=10)
+        
+        # Label de estado
+        self.status_label = ttk.Label(main_frame, text="Listo para actualizar balances", font=("Helvetica", 10))
+        self.status_label.pack(pady=5)
 
     def on_tree_click(self, event):
         region = self.balance_tree.identify("region", event.x, event.y)
@@ -281,12 +294,19 @@ class CryptoViewer(ThemedTk):
             messagebox.showerror("Error de Exportación", f"Fallo al exportar las keys. Error: {str(e)}", parent=self)
 
     def update_balances(self):
+        # Cambiar estado del botón y mostrar indicador de carga
+        self.update_button.config(state='disabled', text="🔄 Actualizando...")
+        self.status_label.config(text="Obteniendo balances de exchanges...")
+        self.update()  # Actualizar la interfaz
+        
+        # Limpiar tablas anteriores
         for item in self.balance_tree.get_children():
             self.balance_tree.delete(item)
         for item in self.total_balance_tree.get_children():
             self.total_balance_tree.delete(item)
 
         total_portfolio = {}
+        errors_found = []
 
         def add_to_total_portfolio(balances, exchange_name):
             for currency, data in balances.items():
@@ -297,21 +317,48 @@ class CryptoViewer(ThemedTk):
                     self.balance_tree.insert('', 'end', values=(exchange_name, currency_code, f"{amount:.8f}", "Ver Gráfico"))
                     total_portfolio[currency_code] = total_portfolio.get(currency_code, 0) + amount
 
-        if self.buda_api_key:
+        # Obtener balances de Buda
+        if self.buda_api_key and self.buda_api_secret:
+            self.status_label.config(text="Consultando Buda...")
+            self.update()
             buda_balances = get_buda_balance(self.buda_api_key, self.buda_api_secret)
             if buda_balances is not None:
                 add_to_total_portfolio(buda_balances, 'Buda')
+                print(f"Buda balances obtenidos: {len(buda_balances)} monedas")
+            else:
+                errors_found.append("Buda: Error al obtener balances")
+        else:
+            errors_found.append("Buda: API keys no configuradas")
 
-        if self.binance_api_key:
+        # Obtener balances de Binance
+        if self.binance_api_key and self.binance_api_secret:
+            self.status_label.config(text="Consultando Binance...")
+            self.update()
             binance_balances = get_binance_balance(self.binance_api_key, self.binance_api_secret)
             if binance_balances is not None:
                 add_to_total_portfolio(binance_balances, 'Binance')
+                print(f"Binance balances obtenidos: {len(binance_balances)} monedas")
+            else:
+                errors_found.append("Binance: Error al obtener balances")
+        else:
+            errors_found.append("Binance: API keys no configuradas")
 
-        if self.cryptomkt_api_key:
+        # Obtener balances de CryptoMKT
+        if self.cryptomkt_api_key and self.cryptomkt_api_secret:
+            self.status_label.config(text="Consultando CryptoMKT...")
+            self.update()
             cryptomkt_balances = get_cryptomkt_balance(self.cryptomkt_api_key, self.cryptomkt_api_secret)
             if cryptomkt_balances is not None:
                 add_to_total_portfolio(cryptomkt_balances, 'CryptoMKT')
+                print(f"CryptoMKT balances obtenidos: {len(cryptomkt_balances)} monedas")
+            else:
+                errors_found.append("CryptoMKT: Error al obtener balances")
+        else:
+            errors_found.append("CryptoMKT: API keys no configuradas")
 
+        # Obtener precios y calcular valor total
+        self.status_label.config(text="Obteniendo precios...")
+        self.update()
         prices_usd = get_prices_from_binance()
         total_portfolio_usd_value = 0
 
@@ -329,7 +376,82 @@ class CryptoViewer(ThemedTk):
                 if price:
                     total_portfolio_usd_value += total_amount * price
 
+        # Actualizar valor total del portafolio
         self.total_portfolio_value_label.config(text=f"Valor Total Estimado del Portafolio (USD): ${total_portfolio_usd_value:,.2f}")
+
+        # Mostrar errores si los hay
+        if errors_found:
+            error_message = "Algunos exchanges presentaron errores:\n" + "\n".join(errors_found)
+            messagebox.showwarning("Advertencias", error_message, parent=self)
+            self.status_label.config(text=f"Actualizado con {len(errors_found)} errores")
+        else:
+            self.status_label.config(text="Balances actualizados correctamente")
+
+        # Restaurar botón
+        self.update_button.config(state='normal', text="🔄 ACTUALIZAR BALANCES")
+        
+        print(f"Actualización completada. Total de monedas: {len(total_portfolio)}")
+        print(f"Valor total del portafolio: ${total_portfolio_usd_value:,.2f}")
+        print(f"Errores encontrados: {len(errors_found)}")
+
+    def show_troubleshooting(self):
+        troubleshooting_text = """
+SOLUCIÓN DE PROBLEMAS - VISOR CRYPTO
+
+Si no observas balances, verifica lo siguiente:
+
+1. API KEYS:
+   • Asegúrate de que las API keys estén configuradas correctamente
+   • Verifica que tengas permisos de lectura (no trading) activados
+   • Las API keys deben estar activas en el exchange
+
+2. BUDA.COM:
+   • Usa el endpoint: https://www.buda.com
+   • Verifica que tu API key tenga permisos de balances
+   • Revisa la documentación: https://api.buda.com/en/
+
+3. BINANCE:
+   • Usa el endpoint: https://api.binance.com
+   • Verifica que tu API key no esté restringida por IP
+   • Revisa la documentación: https://developers.binance.com/docs/
+
+4. CRYPTOMKT:
+   • Usa el endpoint: https://api.exchange.cryptomkt.com
+   • Verifica la configuración de tu API key
+
+5. CONEXIÓN:
+   • Verifica tu conexión a internet
+   • Algunos exchanges pueden tener restricciones geográficas
+   • Revisa si hay problemas de firewall
+
+6. DEBUGGING:
+   • Revisa la consola/terminal para mensajes de error detallados
+   • Los errores de autenticación son los más comunes
+
+Si el problema persiste, revisa los logs en la consola para más detalles.
+        """
+        messagebox.showinfo("Solución de Problemas", troubleshooting_text, parent=self)
+
+    def show_about(self):
+        about_text = """
+VISOR CRYPTO v1.0
+
+Una aplicación para visualizar balances de múltiples exchanges de criptomonedas.
+
+Exchanges soportados:
+• Buda.com
+• Binance
+• CryptoMKT
+
+Características:
+• Visualización de balances en tiempo real
+• Cálculo automático del valor del portafolio en USD
+• Gráficos de precios
+• Encriptación segura de API keys
+
+Desarrollado con Python y tkinter.
+        """
+        messagebox.showinfo("Acerca de Visor Crypto", about_text, parent=self)
 
 if __name__ == "__main__":
     app = CryptoViewer()

@@ -1,26 +1,32 @@
 from flask import Flask, render_template, jsonify
 from api_client import get_buda_balance, get_binance_balance, get_cryptomkt_balance, get_prices_from_binance
 import json
+import requests
 
 app = Flask(__name__)
 
-# Mock API keys for now
-# In a real application, these would be stored securely
-MOCK_API_KEYS = {
-    "buda": {"apiKey": "buda_key", "apiSecret": "buda_secret"},
-    "binance": {"apiKey": "binance_key", "apiSecret": "binance_secret"},
-    "cryptomkt": {"apiKey": "cryptomkt_key", "apiSecret": "cryptomkt_secret"}
-}
+# Intentar cargar configuración real, si no existe usar mock
+try:
+    from config import API_KEYS
+    print("Usando API keys reales desde config.py")
+except ImportError:
+    # Mock API keys para desarrollo/pruebas
+    API_KEYS = {
+        "buda": {"apiKey": "your_buda_api_key", "apiSecret": "your_buda_api_secret"},
+        "binance": {"apiKey": "your_binance_api_key", "apiSecret": "your_binance_api_secret"},
+        "cryptomkt": {"apiKey": "your_cryptomkt_api_key", "apiSecret": "your_cryptomkt_api_secret"}
+    }
+    print("Usando API keys mock para desarrollo")
 
 @app.route('/')
 def index():
-    buda_balances = get_buda_balance(MOCK_API_KEYS['buda']['apiKey'], MOCK_API_KEYS['buda']['apiSecret'])
+    buda_balances = get_buda_balance(API_KEYS['buda']['apiKey'], API_KEYS['buda']['apiSecret'])
     if buda_balances is None:
         buda_balances = {}
-    binance_balances = get_binance_balance(MOCK_API_KEYS['binance']['apiKey'], MOCK_API_KEYS['binance']['apiSecret'])
+    binance_balances = get_binance_balance(API_KEYS['binance']['apiKey'], API_KEYS['binance']['apiSecret'])
     if binance_balances is None:
         binance_balances = {}
-    cryptomkt_balances = get_cryptomkt_balance(MOCK_API_KEYS['cryptomkt']['apiKey'], MOCK_API_KEYS['cryptomkt']['apiSecret'])
+    cryptomkt_balances = get_cryptomkt_balance(API_KEYS['cryptomkt']['apiKey'], API_KEYS['cryptomkt']['apiSecret'])
     if cryptomkt_balances is None:
         cryptomkt_balances = {}
 
@@ -53,6 +59,63 @@ def index():
                            total_portfolio=total_portfolio,
                            total_portfolio_usd_value=total_portfolio_usd_value,
                            prices_usd=prices_usd)
+
+@app.route('/api/refresh_data')
+def refresh_data():
+    """Endpoint para actualizar datos sin recargar la página"""
+    try:
+        # Obtener balances
+        buda_balances = get_buda_balance(API_KEYS['buda']['apiKey'], API_KEYS['buda']['apiSecret'])
+        if buda_balances is None:
+            buda_balances = {}
+        
+        binance_balances = get_binance_balance(API_KEYS['binance']['apiKey'], API_KEYS['binance']['apiSecret'])
+        if binance_balances is None:
+            binance_balances = {}
+        
+        cryptomkt_balances = get_cryptomkt_balance(API_KEYS['cryptomkt']['apiKey'], API_KEYS['cryptomkt']['apiSecret'])
+        if cryptomkt_balances is None:
+            cryptomkt_balances = {}
+
+        all_balances = {
+            'Buda': buda_balances,
+            'Binance': binance_balances,
+            'CryptoMKT': cryptomkt_balances
+        }
+
+        # Obtener precios
+        prices_usd = get_prices_from_binance()
+
+        # Calcular portfolio total
+        total_portfolio = {}
+        for exchange, balances in all_balances.items():
+            for currency, amount in balances.items():
+                currency_code = currency.split('-')[0].upper()
+                total_portfolio[currency_code] = total_portfolio.get(currency_code, 0) + amount
+
+        total_portfolio_usd_value = 0
+        for currency, total_amount in total_portfolio.items():
+            price_symbol_usdt = f"{currency}USDT"
+            price_symbol_busd = f"{currency}BUSD"
+            price = prices_usd.get(price_symbol_usdt)
+            if price is None:
+                price = prices_usd.get(price_symbol_busd)
+            if price:
+                total_portfolio_usd_value += total_amount * price
+
+        return jsonify({
+            'success': True,
+            'all_balances': all_balances,
+            'total_portfolio': total_portfolio,
+            'total_portfolio_usd_value': total_portfolio_usd_value,
+            'prices_usd': prices_usd
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/historical_data/<symbol>')
 def historical_data(symbol):

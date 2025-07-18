@@ -86,18 +86,181 @@ tbody tr:hover {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.button-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+}
+
+.button-container button {
+    padding: 12px 18px;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    min-width: 140px;
+}
+
+#import-btn {
+    background: linear-gradient(45deg, #27AE60, #229954);
+    color: white;
+}
+
+#import-btn:hover {
+    background: linear-gradient(45deg, #229954, #1E8449);
+    transform: translateY(-2px);
+}
+
+#export-btn {
+    background: linear-gradient(45deg, #E74C3C, #C0392B);
+    color: white;
+}
+
+#export-btn:hover {
+    background: linear-gradient(45deg, #C0392B, #A93226);
+    transform: translateY(-2px);
+}
+
+#config-btn {
+    background: linear-gradient(45deg, #F39C12, #E67E22);
+    color: white;
+}
+
+#config-btn:hover {
+    background: linear-gradient(45deg, #E67E22, #D35400);
+    transform: translateY(-2px);
+}
+
+#chart-btn {
+    background: linear-gradient(45deg, #9B59B6, #8E44AD);
+    color: white;
+}
+
+#chart-btn:hover {
+    background: linear-gradient(45deg, #8E44AD, #7D3C98);
+    transform: translateY(-2px);
 }
 
 #refresh-btn {
-    background-color: #3498DB;
+    background: linear-gradient(135deg, #3498DB, #2980B9);
     color: white;
     border: none;
-    padding: 10px 15px;
-    border-radius: 5px;
+    padding: 15px 25px;
+    border-radius: 8px;
     cursor: pointer;
     font-weight: bold;
+    font-size: 16px;
+    box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+    transition: all 0.3s ease;
+    min-width: 200px;
 }
 
-#refresh-btn:hover {
-    background-color: #2980B9;
+#refresh-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2980B9, #1f5a8b);
+    box-shadow: 0 6px 12px rgba(52, 152, 219, 0.4);
+    transform: translateY(-2px);
+}
+
+#refresh-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+#status-message {
+    font-size: 12px;
+    color: #A9C2D9;
+    text-align: right;
+}
+
+/* Estilos responsivos */
+@media (max-width: 768px) {
+    .header-container {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .button-container {
+        align-items: center;
+    }
+    
+    h1 {
+        font-size: 2em;
+    }
+    
+    h2 {
+        font-size: 1.2em;
+    }
+    
+    #refresh-btn {
+        min-width: 180px;
+        padding: 12px 20px;
+        font-size: 14px;
+    }
+    
+    .table-container {
+        padding: 15px;
+        overflow-x: auto;
+    }
+    
+    table {
+        min-width: 100%;
+    }
+    
+    th, td {
+        padding: 8px 10px;
+        font-size: 14px;
+    }
+}
+
+/* Estilos para modales */
+.modal-content {
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.config-section, .import-export-section {
+    line-height: 1.6;
+}
+
+.config-section h4, .import-export-section h4 {
+    color: #3498DB;
+    margin-bottom: 10px;
+}
+
+.config-section code {
+    background-color: #1e1e1e;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    color: #E74C3C;
+}
+
+/* Estilos para inputs en modales */
+input[type="file"], select {
+    background-color: #1e1e1e;
+    color: white;
+    border: 1px solid #3498DB;
+    border-radius: 4px;
+    padding: 8px;
+}
+
+/* Estilos responsivos para modales */
+@media (max-width: 768px) {
+    #config-modal, #import-export-modal {
+        width: 90% !important;
+    }
+    
+    #chart-container {
+        width: 95% !important;
+        height: 70% !important;
+    }
 }
