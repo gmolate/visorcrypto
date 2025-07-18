@@ -12,37 +12,51 @@ import os
 import shutil
 from tkinter import simpledialog
 import urllib.parse
-# Asumiendo que tienes este archivo con las funciones de encriptación
-# from crypto_utils import encrypt_api_keys, decrypt_api_keys
-
-# --- Bloque de crypto_utils.py (simulado si no lo tienes) ---
-# Para que el script se pueda ejecutar, si no tienes el archivo crypto_utils.py,
-# puedes usar este bloque. Si ya lo tienes, puedes eliminarlo.
-def encrypt_api_keys(data, password):
-    # Implementación de marcador de posición
-    print("Simulando encriptación...")
-    return {"encryptedHex": "encrypted_data_placeholder", "ivHex": "iv_placeholder", "saltHex": "salt_placeholder"}
-
-def decrypt_api_keys(encrypted_hex, iv_hex, salt_hex, password):
-    # Implementación de marcador de posición
-    print("Simulando desencriptación...")
-    # Devuelve claves de prueba si la contraseña es 'password'
-    if password == 'password':
-        return {
-            "buda": {"apiKey": "buda_key", "apiSecret": "buda_secret"},
-            "binance": {"apiKey": "binance_key", "apiSecret": "binance_secret"},
-            "cryptomkt": {"apiKey": "cryptomkt_key", "apiSecret": "cryptomkt_secret"}
-        }
-    raise Exception("Contraseña incorrecta o datos corruptos")
-# --- Fin del bloque simulado ---
-
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from crypto_utils import encrypt_api_keys, decrypt_api_keys
+from api_client import get_buda_balance, get_binance_balance, get_cryptomkt_balance, get_prices_from_binance
 
 class CryptoViewer(ThemedTk):
     def __init__(self):
-        super().__init__(theme="arc") # Puedes probar otros temas como "plastik", "adapta", etc.
+        super().__init__(theme="equilux")  # Tema oscuro
 
         self.title("Visor Crypto")
-        self.geometry("800x600")
+        self.geometry("1024x768")
+        self.configure(bg='#1A1A1A')
+
+        # Estilo para los widgets
+        style = ttk.Style(self)
+        style.theme_use("equilux")
+        style.configure("Treeview",
+                        background="#2A2D30",
+                        foreground="white",
+                        fieldbackground="#2A2D30",
+                        rowheight=25)
+        style.map('Treeview', background=[('selected', '#1A1A1A')])
+        style.configure("Treeview.Heading",
+                        background="#1A1A1A",
+                        foreground="white",
+                        font=('Helvetica', 10, 'bold'))
+        style.configure("TLabel",
+                        background='#1A1A1A',
+                        foreground='white',
+                        font=('Helvetica', 12))
+        style.configure("TLabelframe",
+                        background='#1A1A1A',
+                        foreground='white',
+                        labelmargins= (10, 5))
+        style.configure("TLabelframe.Label",
+                        background='#1A1A1A',
+                        foreground='white',
+                        font=('Helvetica', 12, 'bold'))
+        style.configure("TButton",
+                        background='#3498DB',
+                        foreground='white',
+                        font=('Helvetica', 10, 'bold'),
+                        padding=5)
+        style.map("TButton",
+                  background=[('active', '#2980B9')])
 
         self.buda_api_key = None
         self.buda_api_secret = None
@@ -53,18 +67,7 @@ class CryptoViewer(ThemedTk):
 
         self.load_encrypted_api_keys()
 
-        # =========================================================================
-        # CORRECCIÓN 1: Actualizar el endpoint de CryptoMKT a la URL correcta
-        # =========================================================================
-        self.api_endpoints = {
-            'buda': 'https://www.buda.com', # Base URL para Buda
-            'binance': 'https://api.binance.com', # Base URL para Binance
-            'cryptomkt': 'https://api.exchange.cryptomkt.com' # URL correcta para CryptoMKT
-        }
-        # =========================================================================
-
         self.setup_ui()
-
 
     def load_encrypted_api_keys(self):
         if not os.path.exists('api_keys.json'):
@@ -114,45 +117,108 @@ class CryptoViewer(ThemedTk):
             messagebox.showerror("Fallo en Desencriptación", f"No se pudieron desencriptar las API keys. Contraseña incorrecta o datos corruptos. Error: {str(e)}", parent=self)
 
     def setup_ui(self):
-        main_frame = ttk.Frame(self)
+        main_frame = ttk.Frame(self, style="TFrame")
         main_frame.pack(padx=20, pady=20, fill='both', expand=True)
 
-        title_label = ttk.Label(main_frame, text="Visor de Portafolio Crypto", font=("Helvetica", 16))
-        title_label.pack(pady=10)
+        # --- Menú ---
+        menubar = tk.Menu(self)
+        self.config(menu=menubar)
 
-        api_frame = ttk.LabelFrame(main_frame, text="Configuración API")
-        api_frame.pack(fill='x', pady=10)
+        api_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Configuración", menu=api_menu)
+        api_menu.add_command(label="Configurar Buda", command=lambda: self.setup_api_keys('buda'))
+        api_menu.add_command(label="Configurar Binance", command=lambda: self.setup_api_keys('binance'))
+        api_menu.add_command(label="Configurar CryptoMKT", command=lambda: self.setup_api_keys('cryptomkt'))
+        api_menu.add_separator()
+        api_menu.add_command(label="Importar Keys", command=self.import_api_keys_file)
+        api_menu.add_command(label="Exportar Keys", command=self.export_api_keys_file)
+        
+        help_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Ayuda", menu=help_menu)
+        help_menu.add_command(label="Solución de Problemas", command=self.show_troubleshooting)
+        help_menu.add_command(label="Acerca de", command=self.show_about)
 
-        ttk.Button(api_frame, text="Configurar Buda", command=lambda: self.setup_api_keys('buda')).pack(pady=5, padx=5, side='left')
-        ttk.Button(api_frame, text="Configurar Binance", command=lambda: self.setup_api_keys('binance')).pack(pady=5, padx=5, side='left')
-        ttk.Button(api_frame, text="Configurar CryptoMKT", command=lambda: self.setup_api_keys('cryptomkt')).pack(pady=5, padx=5, side='left')
+        title_label = ttk.Label(main_frame, text="Visor de Portafolio Crypto", font=("Helvetica", 20, 'bold'))
+        title_label.pack(pady=20)
 
-        ttk.Button(api_frame, text="Importar Keys", command=self.import_api_keys_file).pack(pady=5, padx=5, side='left')
-        ttk.Button(api_frame, text="Exportar Keys", command=self.export_api_keys_file).pack(pady=5, padx=5, side='left')
+        self.total_portfolio_value_label = ttk.Label(main_frame, text="Valor Total Estimado del Portafolio (USD): $0.00", font=("Helvetica", 16))
+        self.total_portfolio_value_label.pack(pady=(0, 20))
 
-        self.balance_frame = ttk.LabelFrame(main_frame, text="Balances")
-        self.balance_frame.pack(fill='x', pady=10)
+        # --- Balances por Exchange ---
+        self.balance_frame = ttk.LabelFrame(main_frame, text="Balances por Exchange")
+        self.balance_frame.pack(fill='both', expand=True, pady=10)
 
-        self.balance_tree = ttk.Treeview(self.balance_frame, columns=('Exchange', 'Moneda', 'Cantidad'), show='headings')
+        self.balance_tree = ttk.Treeview(self.balance_frame, columns=('Exchange', 'Moneda', 'Cantidad', 'Acciones'), show='headings')
         self.balance_tree.heading('Exchange', text='Exchange')
         self.balance_tree.heading('Moneda', text='Moneda')
         self.balance_tree.heading('Cantidad', text='Cantidad')
+        self.balance_tree.heading('Acciones', text='')
         self.balance_tree.pack(fill='both', expand=True, pady=5)
+        self.balance_tree.bind('<ButtonRelease-1>', self.on_tree_click)
 
-        # Frame para saldos acumulados
+        # --- Saldos Acumulados ---
         self.total_balance_frame = ttk.LabelFrame(main_frame, text="Saldos Acumulados Totales")
-        self.total_balance_frame.pack(fill='x', pady=10)
+        self.total_balance_frame.pack(fill='both', expand=True, pady=10)
 
         self.total_balance_tree = ttk.Treeview(self.total_balance_frame, columns=('Moneda', 'Cantidad Total'), show='headings')
         self.total_balance_tree.heading('Moneda', text='Moneda')
         self.total_balance_tree.heading('Cantidad Total', text='Cantidad Total')
         self.total_balance_tree.pack(fill='both', expand=True, pady=5)
 
-        # Label para el valor total del portafolio en USD
-        self.total_portfolio_value_label = ttk.Label(main_frame, text="Valor Total Estimado del Portafolio (USD): $0.00", font=("Helvetica", 12))
-        self.total_portfolio_value_label.pack(pady=(5,10))
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(pady=20)
 
-        ttk.Button(main_frame, text="Actualizar Balances", command=self.update_balances).pack(pady=10)
+        # Botón principal de actualización más prominente
+        self.update_button = ttk.Button(button_frame, text="🔄 ACTUALIZAR BALANCES", command=self.update_balances)
+        self.update_button.pack(side='left', padx=10)
+        
+        # Botón secundario
+        ttk.Button(button_frame, text="Refrescar", command=self.update_balances).pack(side='left', padx=10)
+        
+        # Label de estado
+        self.status_label = ttk.Label(main_frame, text="Listo para actualizar balances", font=("Helvetica", 10))
+        self.status_label.pack(pady=5)
+
+    def on_tree_click(self, event):
+        region = self.balance_tree.identify("region", event.x, event.y)
+        if region == "cell":
+            column = self.balance_tree.identify_column(event.x)
+            if column == '#4':  # Columna "Acciones"
+                item_id = self.balance_tree.identify_row(event.y)
+                item_values = self.balance_tree.item(item_id, 'values')
+                currency = item_values[1]
+                self.show_chart(currency)
+
+    def show_chart(self, currency):
+        symbol = f"{currency.upper()}USDT"
+        url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval=1d&limit=30"
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
+
+            chart_window = tk.Toplevel(self)
+            chart_window.title(f"Gráfico de {currency}")
+            chart_window.geometry("800x600")
+
+            fig = Figure(figsize=(8, 6), dpi=100)
+            plot = fig.add_subplot(1, 1, 1)
+
+            prices = [float(item[4]) for item in data]
+            timestamps = [datetime.fromtimestamp(item[0] / 1000) for item in data]
+
+            plot.plot(timestamps, prices, marker='o', linestyle='-')
+            plot.set_title(f"Precio de {currency} (Últimos 30 días)")
+            plot.set_xlabel("Fecha")
+            plot.set_ylabel("Precio (USD)")
+            fig.autofmt_xdate()
+
+            canvas = FigureCanvasTkAgg(fig, master=chart_window)
+            canvas.draw()
+            canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+
+        except requests.exceptions.RequestException as e:
+            messagebox.showerror("Error", f"No se pudieron obtener los datos del gráfico: {e}", parent=self)
 
     def setup_api_keys(self, exchange):
         api_key = simpledialog.askstring("Configuración", f"Ingrese su API Key de {exchange.capitalize()}:", parent=self)
@@ -226,176 +292,166 @@ class CryptoViewer(ThemedTk):
             messagebox.showinfo("Éxito", f"API keys exportadas a {filepath}", parent=self)
         except Exception as e:
             messagebox.showerror("Error de Exportación", f"Fallo al exportar las keys. Error: {str(e)}", parent=self)
-    
-    # --- Métodos de API de Binance ---
-    def get_binance_balance(self):
-        if not self.binance_api_key or not self.binance_api_secret:
-            messagebox.showwarning("Advertencia", "Por favor configure primero sus API keys de Binance.", parent=self)
-            return {}
-        try:
-            timestamp = int(time.time() * 1000)
-            query_string = f'timestamp={timestamp}'
-            signature = hmac.new(self.binance_api_secret.encode('utf-8'), query_string.encode('utf-8'), hashlib.sha256).hexdigest()
-            headers = {'X-MBX-APIKEY': self.binance_api_key}
-            response = requests.get(f'{self.api_endpoints["binance"]}/api/v3/account', headers=headers, params={'timestamp': timestamp, 'signature': signature})
-            response.raise_for_status()
-            data = response.json()
-            return {b['asset']: float(b['free']) + float(b['locked']) for b in data['balances'] if float(b['free']) > 0 or float(b['locked']) > 0}
-        except Exception as e:
-            messagebox.showerror("Error", f"Error al conectar con Binance: {e}", parent=self)
-            return {}
-            
-    # --- Métodos de API de Buda ---
-    def get_buda_balance(self):
-        if not self.buda_api_key or not self.buda_api_secret:
-            messagebox.showwarning("Advertencia", "Por favor configure primero sus API keys de Buda.", parent=self)
-            return {}
-        try:
-            nonce = str(int(time.time() * 1000))
-            path = '/api/v2/balances'
-            text_to_sign = f"GET {path} {nonce}"
-            signature = hmac.new(self.buda_api_secret.encode('utf-8'), text_to_sign.encode('utf-8'), hashlib.sha384).hexdigest()
-            headers = {'X-SBTC-APIKEY': self.buda_api_key, 'X-SBTC-NONCE': nonce, 'X-SBTC-SIGNATURE': signature}
-            response = requests.get(f'{self.api_endpoints["buda"]}{path}', headers=headers)
-            response.raise_for_status()
-            balances = response.json()['balances']
-            return {b['id']: float(b['amount'][0]) for b in balances if float(b['amount'][0]) > 0}
-        except Exception as e:
-            messagebox.showerror("Error", f"Error al conectar con Buda: {e}", parent=self)
-            return {}
 
-    # --- Métodos de API de CryptoMKT ---
-    # =========================================================================
-    # CORRECCIÓN 2: Lógica completamente corregida para CryptoMKT
-    # =========================================================================
-    def get_cryptomkt_balance(self):
-        if not self.cryptomkt_api_key or not self.cryptomkt_api_secret:
-            messagebox.showwarning("Advertencia", "Por favor configure primero sus API keys de CryptoMKT.", parent=self)
-            return {}
-
-        try:
-            # El path correcto del endpoint
-            path = '/api/3/wallet/balances'
-            timestamp = str(int(time.time()))
-            
-            # El mensaje a firmar es: timestamp + path
-            message = timestamp + path
-            
-            # El algoritmo de firma es SHA256
-            signature = hmac.new(
-                self.cryptomkt_api_secret.encode('utf-8'),
-                msg=message.encode('utf-8'),
-                digestmod=hashlib.sha256
-            ).hexdigest()
-
-            headers = {
-                'X-MKT-APIKEY': self.cryptomkt_api_key,
-                'X-MKT-TIMESTAMP': timestamp,
-                'X-MKT-SIGNATURE': signature
-            }
-
-            response = requests.get(f'{self.api_endpoints["cryptomkt"]}{path}', headers=headers)
-            response.raise_for_status()
-            
-            data = response.json()
-            balances = data.get('data', [])
-            return {
-                balance['id'].upper(): float(balance['available']) + float(balance['reserved'])
-                for balance in balances
-                if float(balance['available']) > 0 or float(balance['reserved']) > 0
-            }
-
-        except Exception as e:
-            # Captura detalles del error para mostrar un mensaje más útil
-            error_details = str(e)
-            if hasattr(e, 'response') and e.response is not None:
-                try:
-                    error_details = e.response.json().get('error', {}).get('message', e.response.text)
-                except json.JSONDecodeError:
-                    error_details = e.response.text
-            messagebox.showerror("Error", f"Error al conectar con CryptoMKT: {error_details}", parent=self)
-            return {}
-    # =========================================================================
-    
     def update_balances(self):
-        # Limpiar vistas previas
+        # Cambiar estado del botón y mostrar indicador de carga
+        self.update_button.config(state='disabled', text="🔄 Actualizando...")
+        self.status_label.config(text="Obteniendo balances de exchanges...")
+        self.update()  # Actualizar la interfaz
+        
+        # Limpiar tablas anteriores
         for item in self.balance_tree.get_children():
             self.balance_tree.delete(item)
         for item in self.total_balance_tree.get_children():
             self.total_balance_tree.delete(item)
 
-        total_portfolio = {} # Diccionario para acumular los saldos: {'BTC': 0.5, 'ETH': 10}
+        total_portfolio = {}
+        errors_found = []
 
-        # Función auxiliar para agregar al portafolio total
         def add_to_total_portfolio(balances, exchange_name):
             for currency, data in balances.items():
-                # Aseguramos que 'amount' exista, si no, asumimos que 'data' es directamente el monto
                 amount = data if isinstance(data, (float, int)) else data.get('amount', 0)
-
-                # Normalizar nombres de criptomonedas (ej. BTC-CLP -> BTC)
                 currency_code = currency.split('-')[0].upper()
 
                 if amount > 0:
-                    self.balance_tree.insert('', 'end', values=(exchange_name, currency_code, f"{amount:.8f}"))
+                    self.balance_tree.insert('', 'end', values=(exchange_name, currency_code, f"{amount:.8f}", "Ver Gráfico"))
                     total_portfolio[currency_code] = total_portfolio.get(currency_code, 0) + amount
 
-        # Buda
-        if self.buda_api_key:
-            buda_balances = self.get_buda_balance() # { 'BTC': amount, 'ETH': amount }
-            add_to_total_portfolio(buda_balances, 'Buda')
+        # Obtener balances de Buda
+        if self.buda_api_key and self.buda_api_secret:
+            self.status_label.config(text="Consultando Buda...")
+            self.update()
+            buda_balances = get_buda_balance(self.buda_api_key, self.buda_api_secret)
+            if buda_balances is not None:
+                add_to_total_portfolio(buda_balances, 'Buda')
+                print(f"Buda balances obtenidos: {len(buda_balances)} monedas")
+            else:
+                errors_found.append("Buda: Error al obtener balances")
+        else:
+            errors_found.append("Buda: API keys no configuradas")
 
-        # Binance
-        if self.binance_api_key:
-            binance_balances = self.get_binance_balance() # { 'BTC': amount, 'USDT': amount }
-            add_to_total_portfolio(binance_balances, 'Binance')
+        # Obtener balances de Binance
+        if self.binance_api_key and self.binance_api_secret:
+            self.status_label.config(text="Consultando Binance...")
+            self.update()
+            binance_balances = get_binance_balance(self.binance_api_key, self.binance_api_secret)
+            if binance_balances is not None:
+                add_to_total_portfolio(binance_balances, 'Binance')
+                print(f"Binance balances obtenidos: {len(binance_balances)} monedas")
+            else:
+                errors_found.append("Binance: Error al obtener balances")
+        else:
+            errors_found.append("Binance: API keys no configuradas")
 
-        # CryptoMKT
-        # La función get_cryptomkt_balance ya devuelve {'CURRENCY': amount}
-        if self.cryptomkt_api_key:
-            cryptomkt_balances = self.get_cryptomkt_balance()
-            add_to_total_portfolio(cryptomkt_balances, 'CryptoMKT')
+        # Obtener balances de CryptoMKT
+        if self.cryptomkt_api_key and self.cryptomkt_api_secret:
+            self.status_label.config(text="Consultando CryptoMKT...")
+            self.update()
+            cryptomkt_balances = get_cryptomkt_balance(self.cryptomkt_api_key, self.cryptomkt_api_secret)
+            if cryptomkt_balances is not None:
+                add_to_total_portfolio(cryptomkt_balances, 'CryptoMKT')
+                print(f"CryptoMKT balances obtenidos: {len(cryptomkt_balances)} monedas")
+            else:
+                errors_found.append("CryptoMKT: Error al obtener balances")
+        else:
+            errors_found.append("CryptoMKT: API keys no configuradas")
 
-        # Obtener precios de Binance para calcular el valor en USD
-        prices_usd = self.get_prices_from_binance() # {'BTCUSDT': 60000.0, 'ETHUSDT': 3000.0}
-
+        # Obtener precios y calcular valor total
+        self.status_label.config(text="Obteniendo precios...")
+        self.update()
+        prices_usd = get_prices_from_binance()
         total_portfolio_usd_value = 0
 
-        # Poblar la tabla de saldos acumulados y calcular valor en USD
-        for currency, total_amount in total_portfolio.items():
-            if total_amount > 0: # Solo mostrar si hay saldo
+        for currency, total_amount in sorted(total_portfolio.items()):
+            if total_amount > 0:
                 self.total_balance_tree.insert('', 'end', values=(currency, f"{total_amount:.8f}"))
 
-                # Intentar encontrar el precio para la moneda (ej. BTCUSDT, ETHUSDT)
-                # Binance usa el par con USDT, ej. BTCUSDT
                 price_symbol_usdt = f"{currency}USDT"
-                price_symbol_busd = f"{currency}BUSD" # Algunas pueden estar en BUSD
+                price_symbol_busd = f"{currency}BUSD"
 
                 price = prices_usd.get(price_symbol_usdt)
-                if price is None: # Si no se encuentra con USDT, intentar con BUSD
+                if price is None:
                     price = prices_usd.get(price_symbol_busd)
 
                 if price:
                     total_portfolio_usd_value += total_amount * price
 
+        # Actualizar valor total del portafolio
         self.total_portfolio_value_label.config(text=f"Valor Total Estimado del Portafolio (USD): ${total_portfolio_usd_value:,.2f}")
 
-    def get_prices_from_binance(self):
-        """Obtiene los precios de todos los tickers de Binance en formato {symbol: price}."""
-        try:
-            url = f"{self.api_endpoints['binance']}/api/v3/ticker/price"
-            response = requests.get(url)
-            response.raise_for_status()
-            prices_data = response.json() # Lista de diccionarios: [{'symbol': 'BTCUSDT', 'price': '60000.00'}, ...]
+        # Mostrar errores si los hay
+        if errors_found:
+            error_message = "Algunos exchanges presentaron errores:\n" + "\n".join(errors_found)
+            messagebox.showwarning("Advertencias", error_message, parent=self)
+            self.status_label.config(text=f"Actualizado con {len(errors_found)} errores")
+        else:
+            self.status_label.config(text="Balances actualizados correctamente")
 
-            # Convertir la lista de diccionarios a un solo diccionario {symbol: price}
-            # y asegurarse de que el precio sea float
-            return {item['symbol']: float(item['price']) for item in prices_data}
-        except requests.exceptions.RequestException as e:
-            messagebox.showerror("Error de Precios", f"No se pudieron obtener los precios de Binance: {e}", parent=self)
-            return {}
-        except Exception as e:
-            messagebox.showerror("Error de Precios", f"Error procesando precios de Binance: {str(e)}", parent=self)
-            return {}
+        # Restaurar botón
+        self.update_button.config(state='normal', text="🔄 ACTUALIZAR BALANCES")
+        
+        print(f"Actualización completada. Total de monedas: {len(total_portfolio)}")
+        print(f"Valor total del portafolio: ${total_portfolio_usd_value:,.2f}")
+        print(f"Errores encontrados: {len(errors_found)}")
+
+    def show_troubleshooting(self):
+        troubleshooting_text = """
+SOLUCIÓN DE PROBLEMAS - VISOR CRYPTO
+
+Si no observas balances, verifica lo siguiente:
+
+1. API KEYS:
+   • Asegúrate de que las API keys estén configuradas correctamente
+   • Verifica que tengas permisos de lectura (no trading) activados
+   • Las API keys deben estar activas en el exchange
+
+2. BUDA.COM:
+   • Usa el endpoint: https://www.buda.com
+   • Verifica que tu API key tenga permisos de balances
+   • Revisa la documentación: https://api.buda.com/en/
+
+3. BINANCE:
+   • Usa el endpoint: https://api.binance.com
+   • Verifica que tu API key no esté restringida por IP
+   • Revisa la documentación: https://developers.binance.com/docs/
+
+4. CRYPTOMKT:
+   • Usa el endpoint: https://api.exchange.cryptomkt.com
+   • Verifica la configuración de tu API key
+
+5. CONEXIÓN:
+   • Verifica tu conexión a internet
+   • Algunos exchanges pueden tener restricciones geográficas
+   • Revisa si hay problemas de firewall
+
+6. DEBUGGING:
+   • Revisa la consola/terminal para mensajes de error detallados
+   • Los errores de autenticación son los más comunes
+
+Si el problema persiste, revisa los logs en la consola para más detalles.
+        """
+        messagebox.showinfo("Solución de Problemas", troubleshooting_text, parent=self)
+
+    def show_about(self):
+        about_text = """
+VISOR CRYPTO v1.0
+
+Una aplicación para visualizar balances de múltiples exchanges de criptomonedas.
+
+Exchanges soportados:
+• Buda.com
+• Binance
+• CryptoMKT
+
+Características:
+• Visualización de balances en tiempo real
+• Cálculo automático del valor del portafolio en USD
+• Gráficos de precios
+• Encriptación segura de API keys
+
+Desarrollado con Python y tkinter.
+        """
+        messagebox.showinfo("Acerca de Visor Crypto", about_text, parent=self)
 
 if __name__ == "__main__":
     app = CryptoViewer()

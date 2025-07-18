@@ -1,60 +1,60 @@
-# Visor Crypto
+# Crypto Visor
 
-Una aplicación de escritorio para visualizar tus balances de criptomonedas en diferentes exchanges:
+Visor de criptomonedas con soporte para Buda, Binance y CryptoMKT.
 
-- Buda
-- Binance
-- CryptoMKT
+## Descripción
 
-## Características
+Este proyecto consta de dos aplicaciones:
 
-- Visualización de balances en tiempo real
-- Soporte para múltiples exchanges
-- Conversión de valores a BTC
-- Interfaz gráfica intuitiva
-- Almacenamiento seguro de API keys
+1.  **Aplicación de Escritorio:** Una aplicación de escritorio creada con Python y Tkinter que te permite ver los balances de tus cuentas en diferentes exchanges de criptomonedas.
+2.  **Aplicación Web:** una versión web creada con Flask que muestra la misma información en tu navegador.
+
+Ambas aplicaciones te permiten:
+
+*   Ver los balances de tus cuentas de Buda, Binance y CryptoMKT.
+*   Ver un resumen total de tu portafolio.
+*   Ver gráficos con el histórico de precios de los últimos 30 días para cada criptomoneda.
 
 ## Requisitos
 
-- Python 3.x
-- Bibliotecas requeridas:
-  - requests
-  - python-dotenv
-  - tkinter (incluido en Python)
+*   Python 3.6+
+*   Dependencias de Python listadas en `requirements.txt`.
 
 ## Instalación
 
-1. Clonar el repositorio:
-```bash
-git clone https://github.com/TU_USUARIO/visor-crypto.git
-cd visor-crypto
-```
+1.  Clona este repositorio:
+    ```bash
+    git clone https://github.com/tu-usuario/crypto-visor.git
+    ```
+2.  Navega al directorio del proyecto:
+    ```bash
+    cd crypto-visor
+    ```
+3.  Instala las dependencias:
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-2. Instalar dependencias:
-```bash
-pip install -r requirements.txt
-```
+## Uso
 
-3. Ejecutar la aplicación:
+### Aplicación de Escritorio
+
+Para ejecutar la aplicación de escritorio, corre el siguiente comando:
+
 ```bash
 python visor_crypto.py
 ```
 
-## Configuración
+La primera vez que ejecutes la aplicación, necesitarás configurar tus API keys. Puedes hacerlo desde el menú `Configuración`.
 
-1. Obtener API keys de los exchanges que desees usar:
-   - [Buda](https://www.buda.com/api)
-   - [Binance](https://www.binance.com/en/my/settings/api-management)
-   - [CryptoMKT](https://www.cryptomkt.com/es/cuenta/api)
+### Aplicación Web
 
-2. En la aplicación, usar los botones de configuración para cada exchange y agregar las API keys.
+Para ejecutar la aplicación web, corre el siguiente comando:
 
-## Seguridad
+```bash
+python app.py
+```
 
-- Las API keys se almacenan localmente en un archivo `.env`
-- Se recomienda usar API keys con permisos de solo lectura
-- Nunca compartas tus API keys
+La aplicación web estará disponible en `http://127.0.0.1:5001`.
 
-## Contribuir
-
-Las contribuciones son bienvenidas. Por favor, abre un issue para discutir los cambios que te gustaría hacer.
+**Nota:** La aplicación web utiliza API keys de prueba por defecto. Para utilizar tus propias API keys, deberás modificarlas en el archivo `app.py`.

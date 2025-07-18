@@ -36,9 +36,9 @@ def encrypt_api_keys(api_keys: dict, password: str) -> dict:
     encrypted_data = aesgcm.encrypt(iv, api_keys_json, None)
 
     return {
-        'encrypted_hex': buffer_to_hex(encrypted_data),
-        'iv_hex': buffer_to_hex(iv),
-        'salt_hex': buffer_to_hex(salt),
+        'encryptedHex': buffer_to_hex(encrypted_data),
+        'ivHex': buffer_to_hex(iv),
+        'saltHex': buffer_to_hex(salt),
     }
 
 def decrypt_api_keys(encrypted_hex: str, iv_hex: str, salt_hex: str, password: str) -> dict:
