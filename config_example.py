@@ -10,9 +10,11 @@ API_KEYS = {
         "apiKey": "tu_binance_api_key_aqui", 
         "apiSecret": "tu_binance_api_secret_aqui"
     },
-    "cryptomkt": {
-        "apiKey": "tu_cryptomkt_api_key_aqui",
-        "apiSecret": "tu_cryptomkt_api_secret_aqui"
+    "notbank": {
+        "apiKey": "tu_notbank_api_key_aqui",
+        "apiSecret": "tu_notbank_api_secret_aqui",
+        "userId": "tu_user_id_aqui",
+        "accountId": "tu_account_id_aqui"
     }
 }
 

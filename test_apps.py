@@ -78,27 +78,30 @@ for file_path, description in web_files.items():
 # Test 4: Probar funciones API
 print("\n4. 🔗 Probando funciones API...")
 try:
-    from api_client import get_buda_balance, get_binance_balance, get_cryptomkt_balance
+    from api_client import get_buda_balance, get_binance_balance, get_notbank_balance
     
     # Test con datos mock
     mock_key = "test_key"
     mock_secret = "test_secret"
+    mock_user_id = "123"
+    mock_account_id = "456"
     
     results = {}
-    apis = [
-        ('Buda', get_buda_balance),
-        ('Binance', get_binance_balance),
-        ('CryptoMKT', get_cryptomkt_balance)
-    ]
     
-    for name, func in apis:
-        try:
-            result = func(mock_key, mock_secret)
-            results[name] = result
-            print(f"   ✅ {name}: {type(result)} - {len(result) if result else 0} items")
-        except Exception as e:
-            print(f"   ⚠️ {name}: Error - {e}")
+    # Test Buda and Binance
+    buda_result = get_buda_balance(mock_key, mock_secret)
+    results['Buda'] = buda_result
+    print(f"   ✅ Buda: {type(buda_result)} - {len(buda_result) if buda_result else 0} items")
     
+    binance_result = get_binance_balance(mock_key, mock_secret)
+    results['Binance'] = binance_result
+    print(f"   ✅ Binance: {type(binance_result)} - {len(binance_result) if binance_result else 0} items")
+
+    # Test NotBank
+    notbank_result = get_notbank_balance(mock_key, mock_secret, mock_user_id, mock_account_id)
+    results['NotBank'] = notbank_result
+    print(f"   ✅ NotBank: {type(notbank_result)} - {len(notbank_result) if notbank_result else 0} items")
+
 except Exception as e:
     print(f"   ❌ Error general en APIs: {e}")
 
