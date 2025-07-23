@@ -15,7 +15,7 @@ import urllib.parse
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from crypto_utils import encrypt_api_keys, decrypt_api_keys
-from api_client import get_buda_balance, get_binance_balance, get_cryptomkt_balance, get_prices_from_binance
+from api_client import get_buda_balance, get_binance_balance, get_notbank_balance, get_prices_from_binance
 
 class CryptoViewer(ThemedTk):
     def __init__(self):
@@ -62,8 +62,10 @@ class CryptoViewer(ThemedTk):
         self.buda_api_secret = None
         self.binance_api_key = None
         self.binance_api_secret = None
-        self.cryptomkt_api_key = None
-        self.cryptomkt_api_secret = None
+        self.notbank_api_key = None
+        self.notbank_api_secret = None
+        self.notbank_user_id = None
+        self.notbank_account_id = None
 
         self.load_encrypted_api_keys()
 
@@ -107,9 +109,11 @@ class CryptoViewer(ThemedTk):
             self.binance_api_key = binance_keys.get('apiKey')
             self.binance_api_secret = binance_keys.get('apiSecret')
 
-            cryptomkt_keys = decrypted_keys.get('cryptomkt', {})
-            self.cryptomkt_api_key = cryptomkt_keys.get('apiKey')
-            self.cryptomkt_api_secret = cryptomkt_keys.get('apiSecret')
+            notbank_keys = decrypted_keys.get('notbank', {})
+            self.notbank_api_key = notbank_keys.get('apiKey')
+            self.notbank_api_secret = notbank_keys.get('apiSecret')
+            self.notbank_user_id = notbank_keys.get('userId')
+            self.notbank_account_id = notbank_keys.get('accountId')
 
             messagebox.showinfo("API Keys Cargadas", "API keys desencriptadas y cargadas exitosamente.", parent=self)
 
@@ -128,7 +132,7 @@ class CryptoViewer(ThemedTk):
         menubar.add_cascade(label="Configuración", menu=api_menu)
         api_menu.add_command(label="Configurar Buda", command=lambda: self.setup_api_keys('buda'))
         api_menu.add_command(label="Configurar Binance", command=lambda: self.setup_api_keys('binance'))
-        api_menu.add_command(label="Configurar CryptoMKT", command=lambda: self.setup_api_keys('cryptomkt'))
+        api_menu.add_command(label="Configurar NotBank", command=lambda: self.setup_api_keys('notbank'))
         api_menu.add_separator()
         api_menu.add_command(label="Importar Keys", command=self.import_api_keys_file)
         api_menu.add_command(label="Exportar Keys", command=self.export_api_keys_file)
@@ -231,9 +235,11 @@ class CryptoViewer(ThemedTk):
             elif exchange == 'binance':
                 self.binance_api_key = api_key
                 self.binance_api_secret = api_secret
-            elif exchange == 'cryptomkt':
-                self.cryptomkt_api_key = api_key
-                self.cryptomkt_api_secret = api_secret
+            elif exchange == 'notbank':
+                self.notbank_api_key = api_key
+                self.notbank_api_secret = api_secret
+                self.notbank_user_id = simpledialog.askstring("Configuración", "Ingrese su User ID de NotBank:", parent=self)
+                self.notbank_account_id = simpledialog.askstring("Configuración", "Ingrese su Account ID de NotBank:", parent=self)
             self.save_api_keys()
 
     def save_api_keys(self):
@@ -250,8 +256,8 @@ class CryptoViewer(ThemedTk):
         if self.binance_api_key and self.binance_api_secret:
             api_keys_to_encrypt["binance"] = {"apiKey": self.binance_api_key, "apiSecret": self.binance_api_secret}
 
-        if self.cryptomkt_api_key and self.cryptomkt_api_secret:
-            api_keys_to_encrypt["cryptomkt"] = {"apiKey": self.cryptomkt_api_key, "apiSecret": self.cryptomkt_api_secret}
+        if self.notbank_api_key and self.notbank_api_secret and self.notbank_user_id and self.notbank_account_id:
+            api_keys_to_encrypt["notbank"] = {"apiKey": self.notbank_api_key, "apiSecret": self.notbank_api_secret, "userId": self.notbank_user_id, "accountId": self.notbank_account_id}
 
         if not api_keys_to_encrypt:
             messagebox.showinfo("Sin Keys", "No hay API keys configuradas para guardar.", parent=self)
@@ -343,18 +349,18 @@ class CryptoViewer(ThemedTk):
         else:
             errors_found.append("Binance: API keys no configuradas")
 
-        # Obtener balances de CryptoMKT
-        if self.cryptomkt_api_key and self.cryptomkt_api_secret:
-            self.status_label.config(text="Consultando CryptoMKT...")
+        # Obtener balances de NotBank
+        if self.notbank_api_key and self.notbank_api_secret and self.notbank_user_id and self.notbank_account_id:
+            self.status_label.config(text="Consultando NotBank...")
             self.update()
-            cryptomkt_balances = get_cryptomkt_balance(self.cryptomkt_api_key, self.cryptomkt_api_secret)
-            if cryptomkt_balances is not None:
-                add_to_total_portfolio(cryptomkt_balances, 'CryptoMKT')
-                print(f"CryptoMKT balances obtenidos: {len(cryptomkt_balances)} monedas")
+            notbank_balances = get_notbank_balance(self.notbank_api_key, self.notbank_api_secret, self.notbank_user_id, self.notbank_account_id)
+            if notbank_balances is not None:
+                add_to_total_portfolio(notbank_balances, 'NotBank')
+                print(f"NotBank balances obtenidos: {len(notbank_balances)} monedas")
             else:
-                errors_found.append("CryptoMKT: Error al obtener balances")
+                errors_found.append("NotBank: Error al obtener balances")
         else:
-            errors_found.append("CryptoMKT: API keys no configuradas")
+            errors_found.append("NotBank: API keys no configuradas")
 
         # Obtener precios y calcular valor total
         self.status_label.config(text="Obteniendo precios...")
@@ -415,8 +421,8 @@ Si no observas balances, verifica lo siguiente:
    • Verifica que tu API key no esté restringida por IP
    • Revisa la documentación: https://developers.binance.com/docs/
 
-4. CRYPTOMKT:
-   • Usa el endpoint: https://api.exchange.cryptomkt.com
+4. NotBank:
+   • Usa el endpoint: https://api.notbank.exchange
    • Verifica la configuración de tu API key
 
 5. CONEXIÓN:
@@ -441,7 +447,7 @@ Una aplicación para visualizar balances de múltiples exchanges de criptomoneda
 Exchanges soportados:
 • Buda.com
 • Binance
-• CryptoMKT
+• NotBank
 
 Características:
 • Visualización de balances en tiempo real

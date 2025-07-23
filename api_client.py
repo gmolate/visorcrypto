@@ -3,11 +3,15 @@ import time
 import hmac
 import hashlib
 import json
+from notbank_python_sdk.notbank_client import NotbankClient
+from notbank_python_sdk.requests_models import *
+from notbank_python_sdk.client_connection_factory import new_rest_client_connection
+from notbank_python_sdk.error import NotbankException
 
 API_ENDPOINTS = {
     'buda': 'https://www.buda.com',
     'binance': 'https://api.binance.com',
-    'cryptomkt': 'https://api.exchange.cryptomkt.com'
+    'notbank': 'https://api.notbank.exchange'
 }
 
 def get_binance_balance(api_key, api_secret):
@@ -91,61 +95,48 @@ def get_buda_balance(api_key, api_secret):
         print(f"Buda: Detalles del error: {str(e)}")
         return None
 
-def get_cryptomkt_balance(api_key, api_secret):
-    if not api_key or not api_secret:
-        print("CryptoMKT: API key o secret no proporcionados")
+def get_notbank_balance(api_key, api_secret, user_id, account_id):
+    if not all([api_key, api_secret, user_id, account_id]):
+        print("NotBank: API key, secret, user_id, or account_id not provided")
         return None
-    
-    # Si es una API key mock, retornar datos de prueba
-    if api_key == "cryptomkt_key" or api_secret == "cryptomkt_secret":
-        print("CryptoMKT: Usando datos mock para prueba")
+
+    if api_key == "notbank_key" and api_secret == "notbank_secret":
+        print("NotBank: Using mock data for testing")
         return {"BTC": 0.05678901, "ETH": 0.78901234, "CLP": 25000.0}
-        
+
+    client = None
     try:
-        path = '/api/3/wallet/balances'
-        timestamp = str(int(time.time()))
-        message = timestamp + path
-        signature = hmac.new(
-            api_secret.encode('utf-8'),
-            msg=message.encode('utf-8'),
-            digestmod=hashlib.sha256
-        ).hexdigest()
-        headers = {
-            'X-MKT-APIKEY': api_key,
-            'X-MKT-TIMESTAMP': timestamp,
-            'X-MKT-SIGNATURE': signature
-        }
+        rest_connection = new_rest_client_connection()
+        client = NotbankClient(rest_connection)
         
-        print(f"CryptoMKT: Realizando petición a {API_ENDPOINTS['cryptomkt']}{path}")
-        response = requests.get(f'{API_ENDPOINTS["cryptomkt"]}{path}', headers=headers)
-        print(f"CryptoMKT: Status code: {response.status_code}")
+        authenticate = client.authenticate(
+            AuthenticateRequest(
+                api_public_key=api_key,
+                api_secret_key=api_secret,
+                user_id=int(user_id),
+            )
+        )
+        if not authenticate.authenticated:
+            raise Exception("Authentication failed")
+
+        positions = client.get_account_positions(GetAccountPositionsRequest(account_id=int(account_id)))
         
-        if response.status_code != 200:
-            print(f"CryptoMKT: Error HTTP {response.status_code}: {response.text}")
-            return None
-            
-        response.raise_for_status()
-        data = response.json()
-        print(f"CryptoMKT: Respuesta recibida: {data}")
-        
-        balances = data.get('data', [])
         result = {
-            balance['id'].upper(): float(balance['available']) + float(balance['reserved'])
-            for balance in balances
-            if float(balance['available']) > 0 or float(balance['reserved']) > 0
+            pos.product_symbol: pos.amount
+            for pos in positions
+            if pos.amount > 0
         }
-        print(f"CryptoMKT: Balances procesados: {len(result)} monedas con balance > 0")
+        print(f"NotBank: Processed balances: {len(result)} coins with balance > 0")
         return result
-    except Exception as e:
-        error_details = str(e)
-        if hasattr(e, 'response') and e.response is not None:
-            try:
-                error_details = e.response.json().get('error', {}).get('message', e.response.text)
-            except json.JSONDecodeError:
-                error_details = e.response.text
-        print(f"Error connecting to CryptoMKT: {error_details}")
-        print(f"CryptoMKT: Detalles del error: {str(e)}")
+    except NotbankException as e:
+        print(f"Error connecting to NotBank: {e}")
         return None
+    except Exception as e:
+        print(f"An unexpected error occurred with NotBank: {e}")
+        return None
+    finally:
+        if client:
+            client.close()
 
 def get_prices_from_binance():
     try:

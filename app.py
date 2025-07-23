@@ -1,5 +1,5 @@
 from flask import Flask, render_template, jsonify
-from api_client import get_buda_balance, get_binance_balance, get_cryptomkt_balance, get_prices_from_binance
+from api_client import get_buda_balance, get_binance_balance, get_notbank_balance, get_prices_from_binance
 import json
 import requests
 
@@ -14,7 +14,7 @@ except ImportError:
     API_KEYS = {
         "buda": {"apiKey": "your_buda_api_key", "apiSecret": "your_buda_api_secret"},
         "binance": {"apiKey": "your_binance_api_key", "apiSecret": "your_binance_api_secret"},
-        "cryptomkt": {"apiKey": "your_cryptomkt_api_key", "apiSecret": "your_cryptomkt_api_secret"}
+        "notbank": {"apiKey": "your_notbank_api_key", "apiSecret": "your_notbank_api_secret", "userId": "your_user_id", "accountId": "your_account_id"}
     }
     print("Usando API keys mock para desarrollo")
 
@@ -26,14 +26,14 @@ def index():
     binance_balances = get_binance_balance(API_KEYS['binance']['apiKey'], API_KEYS['binance']['apiSecret'])
     if binance_balances is None:
         binance_balances = {}
-    cryptomkt_balances = get_cryptomkt_balance(API_KEYS['cryptomkt']['apiKey'], API_KEYS['cryptomkt']['apiSecret'])
-    if cryptomkt_balances is None:
-        cryptomkt_balances = {}
+    notbank_balances = get_notbank_balance(API_KEYS['notbank']['apiKey'], API_KEYS['notbank']['apiSecret'], API_KEYS['notbank']['userId'], API_KEYS['notbank']['accountId'])
+    if notbank_balances is None:
+        notbank_balances = {}
 
     all_balances = {
         'Buda': buda_balances,
         'Binance': binance_balances,
-        'CryptoMKT': cryptomkt_balances
+        'NotBank': notbank_balances
     }
 
     prices_usd = get_prices_from_binance()
@@ -73,14 +73,14 @@ def refresh_data():
         if binance_balances is None:
             binance_balances = {}
         
-        cryptomkt_balances = get_cryptomkt_balance(API_KEYS['cryptomkt']['apiKey'], API_KEYS['cryptomkt']['apiSecret'])
-        if cryptomkt_balances is None:
-            cryptomkt_balances = {}
+        notbank_balances = get_notbank_balance(API_KEYS['notbank']['apiKey'], API_KEYS['notbank']['apiSecret'], API_KEYS['notbank']['userId'], API_KEYS['notbank']['accountId'])
+        if notbank_balances is None:
+            notbank_balances = {}
 
         all_balances = {
             'Buda': buda_balances,
             'Binance': binance_balances,
-            'CryptoMKT': cryptomkt_balances
+            'NotBank': notbank_balances
         }
 
         # Obtener precios
