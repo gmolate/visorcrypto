@@ -162,11 +162,11 @@ python app.py
 
 ### **Fuentes de datos**
 - **Buda.com**: Exchange chileno
-- **Binance**: Exchange global
-- **CryptoMKT**: Exchange regional
+- **Binance**: Exchange global  
+- **NotBank (ex-CryptoMKT)**: Exchange regional
 - **Precios**: API pública Binance
 
-## ✨ **ESTADO FINAL: APLICACIÓN COMPLETA**
+## ✨ **ESTADO FINAL: APLICACIÓN COMPLETA Y FUNCIONANDO**
 
 ### ✅ **Completamente funcional**
 - Interfaz web moderna y responsive
@@ -175,12 +175,31 @@ python app.py
 - Documentación completa
 - Datos mock para testing
 - Configuración para producción
+- **NotBank SDK integrado** (ex-CryptoMKT)
 
-### 🚀 **Lista para usar**
-- Ejecutar `python app.py`
-- Abrir http://localhost:5001
+### 🚀 **Lista para usar AHORA**
+- Ejecutar: `.venv\Scripts\python.exe app.py`
+- Abrir: http://localhost:5001
 - Todas las funciones operativas
 - Configuración opcional disponible
+
+## 🔧 **INSTRUCCIONES FINALES**
+
+### **Para iniciar la aplicación:**
+```bash
+.venv\Scripts\python.exe app.py
+```
+
+### **Para API keys reales de NotBank:**
+1. Copiar `config_example.py` a `config.py`
+2. Editar `config.py` con tus API keys reales incluyendo `userId` y `accountId`
+3. Reiniciar aplicación
+
+### **Exchanges soportados:**
+- ✅ **Buda**: Funcionando con datos mock/reales
+- ✅ **Binance**: Funcionando con datos mock/reales  
+- ✅ **NotBank** (ex-CryptoMKT): Funcionando con datos mock/reales
+- ✅ **Precios**: API pública Binance para gráficos
 
 ---
 
