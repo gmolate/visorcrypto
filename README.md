@@ -11,10 +11,9 @@ Una app nativa con Python y Tkinter que te deja ver todos tus balances cripto de
 
 ### 🌐 **Aplicación Web**  
 Una versión web moderna con Flask - ¡accede desde cualquier navegador y dispositivo!
-
-        ![home](/cap1.png)
-                ![graficos](/cap2.png)
-                        ![% portafolio](/cap3.png)
+![home](cap1.png)
+![graficos](cap2.png)
+![% portafolio](cap3.png)
 
 ## ✨ **Características Principales**
 
